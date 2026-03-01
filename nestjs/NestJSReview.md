@@ -1,5 +1,27 @@
 # NestJS
 
+## Índice
+
+- [1) O que é o NestJS e qual problema resolve?](#1-o-que-e-o-nestjs-e-qual-problema-ele-tenta-resolver-dentro-do-ecossistema-nodejs)
+- [2) Provider e Dependency Injection](#2-o-que-e-um-provider-no-nestjs-e-como-o-mecanismo-de-dependency-injection-realmente-funciona-internamente)
+- [3) Escopos DEFAULT, REQUEST, TRANSIENT](#3-o-nestjs-possui-tres-escopos)
+- [4) Middleware, Guards, Pipes, Interceptors](#4-explique-a-responsabilidade-de)
+- [5) Exception Filter vs Interceptor](#5-qual-a-diferenca-pratica-entre-exception-filter-e-interceptor-e-quando-voce-usaria-cada-um)
+- [6) useClass, useValue, useFactory](#6-explique)
+- [useClass](#useclass)
+- [useValue](#usevalue)
+- [useFactory](#usefactory)
+- [7) O que é um Module no Nest?](#7-o-que-exatamente-e-um-module-no-nest-e-qual-problema-arquitetural-ele-resolve-dentro-de-uma-aplicacao-grande)
+- [8) forwardRef()](#8-por-que-as-vezes-precisamos-usar-forwardref-ao-importar-modulos-ou-injetar-services)
+- [9) DTO vs Entity](#9-no-nestjs-qual-a-diferenca-entre-dto-e-entity-e-por-que-misturar-os-dois-e-considerado-ma-pratica)
+- [10) req e res no controller](#10-no-nestjs-por-que-nao-e-recomendado-acessar-diretamente-req-e-res-expressfastify-dentro-do-controller-sempre-que-possivel)
+- [11) Middleware vs Interceptor](#11-qual-a-diferenca-entre-middleware-e-interceptor-se-ambos-conseguem-executar-codigo-antes-da-rota)
+- [12) OnModuleInit e Lifecycle Hooks](#12-no-nestjs-existe-o-conceito-de-lifecycle-hooks-o-que-e-o-onmoduleinit-e-em-que-tipo-de-situacao-real-voce-usaria-isso)
+- [13) JWT e Passport no NestJS](#13-explique-como-funciona-a-autenticacao-com-jwt-usando-passport-no-nestjs-e-qual-o-papel-da-strategy-e-do-guard)
+- [14) Invalidar JWT antes de expirar](#14-jwt-e-stateless-entao-como-e-possivel-invalidar-a-sessao-de-um-usuario-antes-do-token-expirar)
+
+---
+
 #### 1) O que é o NestJS e qual problema ele tenta resolver dentro do ecossistema Node.js?
 
 **O NestJS é um framework backend para Node.js que resolve a falta de arquitetura e padronização presente em frameworks minimalistas como Express.** Ele fornece um container de injeção de dependência, modularização e ciclo de vida de aplicação, inspirado principalmente no Angular e em frameworks como Spring Boot. Ele roda sobre adapters HTTP como Express ou Fastify, atuando como uma camada de abstração. O uso de decorators permite registrar metadados e construir automaticamente rotas, providers e dependências, tornando o código mais testável, previsível e escalável.

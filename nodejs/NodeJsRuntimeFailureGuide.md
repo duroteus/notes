@@ -2,6 +2,17 @@
 
 Este documento descreve falhas clássicas de sistemas backend em Node.js em produção, por que acontecem e qual arquitetura resolve.
 
+## Índice
+
+- [1) Event Loop Blocking (CPU-Bound)](#1-event-loop-blocking-cpu-bound)
+  - [Sintomas reais](#sintomas-reais)
+  - [O que está acontecendo internamente](#o-que-esta-acontecendo-internamente)
+  - [Por que isso acontece](#por-que-isso-acontece)
+  - [Consequência operacional](#consequencia-operacional)
+  - [Soluções](#solucoes)
+
+---
+
 ## 1) Event Loop Blocking (CPU-Bound)
 
 Uma API Node possui um endpoint que realiza uma operação pesada (criptografia, geração de relatório, parsing massivo, validação de schema grande compressão síncrona).

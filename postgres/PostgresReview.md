@@ -1,5 +1,39 @@
 # Postgres
 
+## Índice
+
+- [1) O que é MVCC e qual problema resolve?](#1-o-que-e-mvcc-multi-version-concurrency-control-no-postgresql-e-qual-problema-de-concorrencia-ele-resolve-na-pratica-dentro-de-um-sistema-com-multiplas-transacoes-simultaneas)
+- [2) O que é dead tuple e consequência do MVCC?](#2-o-que-e-uma-dead-tuple-no-postgresql-e-por-que-ela-e-uma-consequencia-inevitavel-do-mvcc)
+- [3) Como o VACUUM funciona e diferença VACUUM/VACUUM FULL/autovacuum?](#3-explique-como-o-vacuum-funciona-internamente-e-qual-a-diferenca-entre)
+- [4) O que é o WAL e por que escreve primeiro nele?](#4-o-que-e-o-wal-write-ahead-log-no-postgresql-e-por-que-o-banco-escreve-primeiro-no-wal-antes-de-gravar-nas-tabelas)
+- [5) O que é checkpoint e relação com WAL?](#5-explique-o-que-e-um-checkpoint-no-postgresql-e-como-ele-se-relaciona-diretamente-com-o-wal-e-com-picos-de-latencia-em-producao)
+- [6) Propriedades ACID e WAL/MVCC?](#6-explique-as-propriedades-acid-de-uma-transacao-e-principalmente-qual-delas-o-wal-garante-diretamente-e-qual-o-mvcc-ajuda-a-implementar)
+- [7) Níveis de isolamento no PostgreSQL](#7-explique-os-niveis-de-isolamento-no-postgresql-e-diga)
+- [8) O que é deadlock e o que o banco faz?](#8-o-que-e-um-deadlock-no-postgresql-como-ele-acontece-entre-duas-transacoes-e-o-que-o-banco-faz-quando-detecta-um)
+- [9) Tipos de locks (row-level, table-level, advisory)](#9-quais-sao-os-tipos-de-locks-no-postgresql-row-level-table-level-e-advisory-e-quando-cada-um-e-usado-na-pratica)
+- [10) Diferença entre Sequential Scan, Index Scan e Index Only Scan](#10-qual-a-diferenca-entre)
+- [11) O que é EXPLAIN ANALYZE](#11-o-que-e-um-explain-analyze-e-qual-a-diferenca-entre)
+- [12) Tipos de índices no PostgreSQL](#12-quais-sao-os-tipos-principais-de-indices-no-postgresql-e-em-que-tipo-de-dado-ou-consulta-cada-um-deve-ser-usado)
+- [13) Covering index (index-only scan) e visibility map](#13-o-que-e-um-covering-index-index-only-scan-e-qual-relacao-ele-tem-com-o-visibility-map-e-o-vacuum)
+- [14) Partial index e composite index](#14-explique-o-que-e-um-partial-index-e-um-composite-index-e-em-qual-situacao-um-indice-composto-na-ordem-errada-deixa-de-ser-utilizado-pelo-planner)
+- [15) OFFSET vs cursor (keyset) pagination](#15-explique-a-diferenca-entre-offset-pagination-e-curosr-keyset-pagination-e-por-que-offset-degrada-drasticamente-performance-em-tabelas-grandes)
+- [16) Connection pooling e Node.js](#16-o-que-e-connection-pooling-no-postgresql-e-por-que-uma-aplicacao-nodejs-pode-derrubar-um-banco-apenas-abrindo-muitas-conexoes-simultaneas)
+- [17) Transações longas e VACUUM/MVCC](#17-em-uma-api-concorrente-por-que-transacoes-longas-sao-perigosas-no-postgresql-e-como-elas-afetam-diretamente-o-vacuum-mvcc-e-crescimento-da-tabela)
+- [18) Replicação e read replica](#18-o-que-e-uma-replicacao-streaming-replication-no-postgresql-o-que-e-uma-read-replica-e-qual-problema-ela-resolve-e-qual-problema-ela-nao-resolve)
+- [19) Failover e risco de perda de dados](#19-o-que-e-failover-no-postgresql-e-qual-e-o-risco-de-perda-de-dados-dependendo-do-tipo-de-replicacao-configurada)
+- [20) Migrations zero downtime](#20-o-que-sao-migrations-com-zero-downtime-no-postgresql-e-por-que-um-simples-alter-table-pode-derrubar-uma-aplicacao-em-producao)
+- [21) Prepared statements e pool](#21-o-que-sao-prepared-statements-no-postgresql-e-por-que-eles-podem-melhorar-performance-e-tambem-causar-problemas-quando-usados-incorretamente-com-pool-de-conexoes)
+- [22) Problema N+1 queries](#22-o-que-e-o-problema-n1-queries-por-que-orms-frequentemente-causam-isso-e-qual-o-impacto-real-no-postgresql-sob-carga-concorrente)
+- [23) Idempotência em API](#23-como-voce-implementaria-idempotencia-em-uma-api-usando-postgresql-para-evitar-por-exemplo-dupla-cobranca-de-pagamento)
+- [24) Fila (queue) usando PostgreSQL](#24-como-voce-implementaria-uma-fila-queue-usando-postgresql-garantindo-que-multiplos-workers-processem-jobs-sem-pegar-o-mesmo-item-duas-vezes)
+- [25) ANALYZE e estatísticas](#25-o-que-e-analyze-no-postgresql-que-tipo-de-estatistica-ele-coleta-e-por-que-estatisticas-desatualizadas-fazem-o-planner-escolher-planos-ruins)
+- [26) pg_stat_activity e pg_stat_statements](#26-o-que-e-o-pg_stat_activity-e-pg_stat_statements-e-como-voce-usaria-ambos-para-investigar-uma-producao-lenta)
+- [27) PITR (Point-in-Time Recovery)](#27-o-que-e-pitr-point-in-time-recovery-no-postgresql-e-como-ele-utiliza-o-wal-para-restaurar-o-banco-ate-um-ponto-especifico-no-tempo)
+- [28) Replicação física vs lógica](#28-qual-a-diferenca-entre-replicacao-fisica-e-replicacao-logica-no-postgresql-e-quando-voce-escolheria-cada-uma)
+- [29) Contenção de locks sem deadlocks](#29-por-que-muitas-conexoes-simultaneas-executando-transacoes-curtas-ainda-podem-causar-contencao-de-locks-e-queda-de-throughput-no-postgresql-mesmo-sem-deadlocks)
+
+---
+
 #### 1) O que é MVCC (Multi-Version Concurrency Control) no PostgreSQL e qual problema de concorrência ele resolve na prática dentro de um sistema com múltiplas transações simultâneas?
 
 MVCC é o mecanismo de concorrência do PostgreSQL que permite **leituras não bloqueantes**.

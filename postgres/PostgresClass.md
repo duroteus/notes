@@ -1,3 +1,34 @@
+## Índice
+
+- [MVCC — o que realmente acontece dentro do PostgreSQL](#mvcc-o-que-realmente-acontece-dentro-do-postgresql)
+- [A consequência do MVCC — Dead tuples](#a-consequencia-do-mvcc-dead-tuples)
+- [E agora? VACUUM!](#e-agora-vacuum)
+- [Vamos falar de WAL (Write-Ahead Log)](#vamos-falar-de-wal-write-ahead-log)
+- [E o que são os checkpoints?](#e-o-que-sao-os-checkpoints)
+- [O que significa o acrônimo ACID?](#o-que-significa-o-acronimo-acid)
+- [E quais são os niveis de isolamento no PostgreSQL?](#e-quais-sao-os-niveis-de-isolamento-no-postgresql)
+- [O que é deadlock e o que fazer para previnir?](#o-que-e-deadlock-e-o-que-fazer-para-previnir)
+- [E quais são os tipos de locks?](#e-quais-sao-os-tipos-de-locks)
+- [E como o PostgreSQL busca os dados nas tabelas?](#e-como-o-postgresql-busca-os-dados-nas-tabelas)
+- [Como o PostgreSQL decide executar uma query](#como-o-postgresql-decide-executar-uma-query)
+- [Índices do PostgreSQL](#indices-do-postgresql)
+- [Paginação: OFFSET x Keyset](#paginacao-offset-x-keyset)
+- [Pool de conexões](#pool-de-conexoes)
+- [O problema de transações longas](#o-problema-de-transacoes-longas)
+- [Replicas](#replicas)
+- [Failover](#failover)
+- [Migrations](#migrations)
+- [Prepared Statements](#prepared-statements)
+- [O problema de N+1 queries](#o-problema-de-n1-queries)
+- [Idempotência no PostgreSQL](#idempotencia-no-postgresql)
+- [Fila usando PostgreSQL](#fila-usando-postgresql)
+- [O que é pg_stat_activity e pg_stat_statements e qual sua importância?](#o-que-e-pg_stat_activity-e-pg_stat_statements-e-qual-sua-importancia)
+- [O que é PITR (Point-in-Time Recovery)?](#o-que-e-pitr-point-in-time-recovery)
+- [Quando usar replicação física e quando usar replicação lógica](#quando-usar-replicacao-fisica-e-quando-usar-replicacao-logica)
+- [Contenção de locks](#contencao-de-locks)
+
+---
+
 ### MVCC — o que realmente acontece dentro do PostgreSQL
 
 Imagine uma tabela `users`:

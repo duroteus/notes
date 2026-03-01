@@ -1,5 +1,18 @@
 # Revisão de Problemas de Arquitetura
 
+## Índice
+
+- [API REST de pedidos (alto volume — 50k req/min)](#api-rest-de-pedidos-alto-volume-50k-reqmin)
+- [Estoque concorrente (hot row no banco)](#estoque-concorrente-hot-row-no-banco)
+- [Upload de vídeos grandes (800MB)](#upload-de-videos-grandes-800mb)
+- [WebSockets (200k usuários online)](#websockets-200k-usuarios-online)
+- [Webhooks externos](#webhooks-externos)
+- [Reverse proxy vs Load balancer](#reverse-proxy-vs-load-balancer)
+- [Webhooks + conexões simultâneas](#webhooks-conexoes-simultaneas)
+- [O aprendizado central](#o-aprendizado-central)
+
+---
+
 ## API REST de pedidos (alto volume — 50k req/min)
 
 ### Cenário

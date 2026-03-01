@@ -1,5 +1,24 @@
 # Node.js Runtime Survival Guide
 
+## Índice
+
+- [O princípio central](#o-principio-central)
+- [O recurso mais crítico do Node](#o-recurso-mais-critico-do-node)
+- [Os 4 tipos clássicos de queda](#os-4-tipos-classicos-de-queda)
+  - [1) Event Loop Blocking (CPU-bound)](#1-event-loop-blocking-cpu-bound)
+  - [2) Blocking I/O (Sync APIs)](#2-blocking-io-sync-apis)
+  - [3) Thread Pool Saturation](#3-thread-pool-saturation)
+  - [4) Memory Pressure / GC Collapse](#4-memory-pressure-gc-collapse)
+- [Como o Garbage Collector te derruba](#como-o-garbage-collector-te-derruba)
+- [Streams vs Buffer (o ponto mais importante)](#streams-vs-buffer-o-ponto-mais-importante)
+- [Upload correto](#upload-correto)
+- [Webhooks (muito importante)](#webhooks-muito-importante)
+- [Filas — o verdadeiro motivo de existirem](#filas-o-verdadeiro-motivo-de-existirem)
+- [Idempotência](#idempotencia)
+- [Regra final para backend Node](#regra-final-para-backend-node)
+
+---
+
 ## O princípio central
 
 > Node não é ruim com carga.

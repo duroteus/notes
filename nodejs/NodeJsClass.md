@@ -2,6 +2,22 @@
 
 Este documento consolida os principais conceitos discutidos: arquitetura do Node.js, funcionamento do Event Loop, fluxo de execução assíncrono, microtasks, workers e closures.
 
+## Índice
+
+- [1) Arquitetura do Node.js (quem é quem)](#1-arquitetura-do-nodejs-quem-e-quem)
+- [2) Call Stack vs Event Loop](#2-call-stack-vs-event-loop)
+- [3) Fases do Event Loop (simplificado)](#3-fases-do-event-loop-simplificado)
+- [4) Microtasks vs Macrotasks](#4-microtasks-vs-macrotasks)
+- [5. Sockets, Kernel e como o servidor HTTP realmente funciona](#5-sockets-kernel-e-como-o-servidor-http-realmente-funciona)
+- [6. Fluxo real de uma requisição HTTP](#6-fluxo-real-de-uma-requisicao-http)
+- [7. Async/Await (o que realmente acontece)](#7-asyncawait-o-que-realmente-acontece)
+- [8. Thread Pool vs Worker Threads](#8-thread-pool-vs-worker-threads)
+- [9. O que é Closure](#9-o-que-e-closure)
+- [10. Closure e Garbage Collector](#10-closure-e-garbage-collector)
+- [11. O clássico: var vs let no loop](#11-o-classico-var-vs-let-no-loop)
+- [Frases-chave para entrevistas](#frases-chave-para-entrevistas)
+- [Modelo mental final](#modelo-mental-final)
+
 ---
 
 ## 1) Arquitetura do Node.js (quem é quem)
