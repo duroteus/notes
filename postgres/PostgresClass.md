@@ -84,7 +84,7 @@ Então
 
 Isso é MVCC.
 
-#### O problemaque ele resolve
+#### O problema que ele resolve
 
 Sem MVCC você teria:
 
