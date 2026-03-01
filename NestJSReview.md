@@ -433,4 +433,119 @@ O correto seria:
 
 > **<span style="color:green">OnModuleInit</span>** executa após o container resolver as dependências e serve para rotinas de inicialização que precisam de outros providers já disponíveis, não para criar recursos de infraestrutura.
 
+---
 
+#### 13) Explique como funciona a autenticação com JWT usando Passport no NestJS e qual o papel da Strategy e do Guard
+
+No NestJS a autenticação não é feita diretamente no controller.
+Ela é delegada ao `AuthGuard` que utiliza uma *Passport Strategy*.
+
+A `JwtStrategy` é responsável por:
+
+**1.** extrair o token da requisição (Authorization Bearer)
+**2.** validar a assinatura
+**3.** decodificar o payload
+**4.** retornar o usuário no método `validate()`
+
+O retorno do `validate()` não vai para a resposta HTTP
+Ele é anexado em `req.user`.
+
+O `AuthGuard('jwt')` intercepta a requisição antes do controller.
+Se a strategy validar o token -> a rota executa
+Se não validar -> 401
+
+Fluxo real:
+```
+request -> AuthGuard -> JwtStrategy -> validate() -> req.user -> controller
+```
+
+O controller nunca valida token manualmente.
+
+A responsabilidade fica separada:
+- **Strategy** -> autentica (verifica identidade)
+- **Guard** -> autoriza acesso à rota
+
+Isso permite trocar o método de autenticação sem alterar controllers.
+
+>No NestJS a autenticação com JWT é implementada usando Passport Strategies.
+O `AuthGuard('jwt')` intercepta a requisição e delega a validação para a `JwtStrategy`, que extrai o token do header Authorization, valida a assinatura e executa o método `validate()`. O retorno desse método é anexado ao `request.user`.
+>
+>Se a validação for bem-sucedida o guard permite o acesso ao controller, caso contrário retorna 401. A Strategy autentica o usuário e o Guard protege a rota, mantendo os controllers desacoplados da lógica de autenticação.
+
+---
+
+#### 14) JWT é stateless. Então como é possível invalidar a sessão de um usuário antes do token expirar?
+
+Esse é um dos maiores problemas do JWT
+
+O servidor não guarda sessão.
+Logo, depois de emitido, o token continua válido até o `exp`.
+
+Se o usuário:
+- trocar senha
+- fizer logout
+- for banido
+
+o token ainda funcionaria.
+
+Por isso precisamos de **estratégias de revogação**
+
+As principais:
+
+**1) Blacklist (revocation list)**
+Guardar o `jti` (token id) no Redis:
+
+```
+logout -> salvar jti no redis
+request -> verificar se jti está revogado
+```
+
+Prós:
+- invalida imediatamente
+
+Contras:
+- perde parte do benefício stateless
+
+**2) Short-lived Access Token + Refresh Token (padrão atual)**
+- Access Token -> 5~15 min
+- Refresh Token -> dias/semanas
+
+Logout:
+-> apaga refresh token do banco
+
+O usuário não consegue gerar novos access tokens.
+
+Essa é a estratégia mais usada em produção
+
+**3) Rotação de Refresh Token**
+
+Cada refresh gera outro refresh e invalída o anterior.
+
+Protege contra:
+- token roubado
+- replay attack
+
+**4) Versionamento do token (tokenVersion)**
+Usuário tem no banco:
+
+```
+tokenVersion: 3
+```
+
+Token contém:
+
+```
+{ sub: userId, ver: 3 }
+```
+
+Ao trocar senha:
+
+```
+tokenVersion++
+```
+
+Tokens antigos para de funcionar.
+
+> Como o JWT é stateless ele não pode ser invalidado diretamente pelo servidor após emitido. Para revogar sessões usamos estratégias complementares: blacklist de tokens (ex: armazenar `jti` em Redis), access tokens de curta duração combinados com refresh tokens persistos, rotação de refresh tokens ou versionametno de token no banco.
+>
+> O método mais comum em produção é access token curto + refresh token armazenado no banco, pois permite logout e revogação sem consultar o banco em toda requisição.
