@@ -13,6 +13,7 @@ Assim, um `SELECT` não precisa esperar um `UPDATE` terminar.
 Problema resolvido: **read vs write blocking** (leitores bloqueando escritores e vice-versa).
 
 Impacto prático:
+
 - alta concorrência
 - menos locks de leitura
 - melhor throughput em APIs
@@ -39,10 +40,11 @@ Impactos em produção:
 Dead tuples são consequência direta do MVCC.
 
 #### 3) Explique como o VACUUM funciona internamente e qual a diferença entre:
- - **VACUUM**
- - **VACUUM FULL**
- - **autovacuum**
-   
+
+- **VACUUM**
+- **VACUUM FULL**
+- **autovacuum**
+
 **E quais são os trade-offs de cada um em ambiente de produção**
 
 `VACUUM` percore a tabela identificando dead tuples e as marca como espaço reutilizável no heap, além de atualizar o visibility map.
@@ -54,29 +56,31 @@ Ele **não reduz o tamanho físico do arquivo**, apenas libera espaço interno.
 `autovacuum` é o daemon automático que executa VACUUM e ANALYZE baseado em thresholds de alterações
 
 Trade-offs:
- - **VACUUM**: seguro online, mas não resolve bloat extremo
- - **VACUUM FULL**: resolve bloat, porém causa downtime
- - **autovacuum**: essencial em produção; se mal configurado -> degradação progressiva
+
+- **VACUUM**: seguro online, mas não resolve bloat extremo
+- **VACUUM FULL**: resolve bloat, porém causa downtime
+- **autovacuum**: essencial em produção; se mal configurado -> degradação progressiva
 
 VACUUM também previne **transaction ID wraparound**, um problema crítico que pode parar o banco.
-
 
 #### 4) O que é o WAL (Write-Ahead Log) no PostgreSQL e por que o banco escreve primeiro no WAL antes de gravar nas tabelas?
 
 WAL (Write-Ahead Log) é o log sequencial onde o PostgreSQL registra **todas as alterações antes de aplicá-los** nos arquivos de dados.
 
-Regra: *write the log first, data later*
+Regra: _write the log first, data later_
 
 Em um `COMMIT`, o banco precisa apenas garantir que o WAL foi persistido em disco (`fsync`).
 Se houver crash, o PostgreSQL faz o **replay do WAL** para restaurar consistência.
 
 Benefícios:
+
 - garante durabilidade (ACI**D**)
 - permite crash recovery
 - base para replication (streaming replicas)
 - escrita sequencial (mais rápida que escrita aleatória)
 
 Trade-off:
+
 - aumenta I/O
 - depende de configuração de `checkpoint` e `wal_buffers`
 
@@ -84,11 +88,12 @@ Trade-off:
 
 Checkpoint é o processo que grava em disco todas as páginas "sujas" (dirty pages) que ainda estão apenas em memória (shared buffers).
 
-Após isso, o PostgreSQL pode descartar WAL antigo, pois os dados já estão persistidos nos *data files*.
+Após isso, o PostgreSQL pode descartar WAL antigo, pois os dados já estão persistidos nos _data files_.
 
 Sem checkpoint, o recovery exigiria replay complexo do WAL.
 
 Impacto em produção:
+
 - muitos writes simultâneos
 - spikes de I/O
 - aumento de latência
@@ -114,6 +119,7 @@ WAL garante diretamente **Durabilidade e Atomicidade**.
 MVCC é a base do **Isolamento**.
 
 #### 7) Explique os níveis de isolamento no PostgreSQL e diga:
+
 **1.** Qual é o padrão?
 **2.** O PostgreSQL realmente implementa todos os níveis conforme o padrão SQL?
 **3.** O que é phantom read e em qual nível ele pode ocorrer?
@@ -146,11 +152,13 @@ Erro retornado:
 `ERROR: deadlock detected`
 
 Impacto:
+
 - rollback inesperado
 - necessidade de retry na aplicação
 - pode escalar sob alta concorrência
 
 Prevenção:
+
 - ordem consistente de acesso a recursos
 - transações curtas
 - evitar locks desnecessários
@@ -170,6 +178,7 @@ Advisory -> controle distribuído, jobs, filas.
 Trade-off: mais locks -> menos concorrência -> maior risco de deadlock.
 
 #### 10) Qual a diferença entre:
+
 - Index Scan
 - Sequential Scan
 
@@ -181,6 +190,7 @@ E por que às vezes o PostgreSQL escolhe fazer um Seq Scan mesmo existindo índi
 O planner escolhe baseado em **custo estimado**, não na existência do índice.
 
 Ele pode preferir Seq Scan quando:
+
 - grande porcentagem da tabela será lida
 - tabela é pequena
 - baixa seletividade do filtro
@@ -188,3 +198,310 @@ Ele pode preferir Seq Scan quando:
 
 Índice não é sempre mais rápido; acesso aleatório ao heap pode custar mais que leitura sequencial.
 
+#### 11) O que é um EXPLAIN ANALYZE e qual a diferença entre:
+
+- **custo estimado**
+- **tempo real de execução**
+
+**E por que isso é essencial para diagnosticar performance em produção?**
+
+`EXPLAIN` mostra o **plano de execução estimado** pelo query planner.
+`EXPLAIN ANALYZE` executa a query e mostra o **plano real com tempos medidos**.
+
+O _cost_ é uma estimativa baseada em I/O, CPU e estástisticas — não é o tempo em ms.
+O _actual time_ é o tempo real de execução.
+
+Diferença grande entre estimado e real indica **estastisticas incorretas ou cardinalidade mal estimada**.
+
+Usos:
+
+- identificar seq scan inesperado
+- verificar uso de índice
+- encontrar join caro
+- diagnosticar slow queries
+
+É essencial em produção porque otimização sem plano real é tentativa e erro.
+
+#### 12) Quais são os tipos principais de índices no PostgreSQL e em que tipo de dado ou consulta cada um deve ser usado?
+
+**B-tree (padrão)**: igualdade e range(`=`, `<`, `>`, `BETWEEN`, `ORDER BY`). Usado para id, email, datas.
+
+**Hash**: apenas igualdade (`=`). Hoje raramente necessário — B Tree normalmente substitui.
+
+**GIN**: busca por múltiplos valores dentro de um campo. Ideal para `ARRAY`, `JSONB`, full-text search (`@>`, `?`, `tsvector`)
+
+**GiST**: dados geométricos e buscas por proximidade (PostGIS, ranges, similaridade).
+
+**BRIN**: tabelas gigantes com dados ordenados fisicamente (logs, séries, temporais). Muito pequeno e barato.
+
+Escolha errada de índice pode piorar performance e aumentar custo de escrita.
+
+#### 13) O que é um covering index (index-only scan) e qual relação ele tem com o _visibility map_ e o VACUUM?
+
+Convering index ocorre quando a query pode ser respondida **apenas pelo índice**, sem acessar o heap (tabela).
+
+O PostgreSQL realiza um **Index Only Scan**.
+
+Isso só é possível se:
+
+**1.** todas as colunas consultadas estiverem no índice <br>
+**2.** a página estiver marcada como _all-visible_ no visibility map
+
+O visibility map é atualizado pelo VACUUM.
+
+Sem VACUUM, o banco precisa verificar o heap para cehcar visibilidade -> perde o benefício.
+
+Resultado: VACUUM impacta diretamente performance de leitura.
+
+#### 14) Explique o que é um partial index e um composite index, e em qual situação um índice composto na ordem errada deixa de ser utilizado pelo planner.
+
+**Partial index** é um índice criado apenas para um subconjunto das linhas usando `WHERE`.
+
+Exemplo:
+
+```sql
+CREATE INDEX idx_orders_open ON orders(user_id)
+WHERE status = 'open';
+```
+
+Reduz tamanho do índice e custo de escrita.
+
+**Composite index** indexa múltiplas colunas em ordem definida:
+
+```sql
+CREATE INDEX idx_orders_user_status ON orders(user_id, status)
+```
+
+A ordem importa.
+O planner só usa eficientemente pelo **prefixo à esquerda**.
+
+Serve para:
+
+- `WHERE user_id = ?`
+- `WHERE user_id = ? AND status = ?`
+
+Não serve para:
+
+- `WHERE status = ?` (sozinho)
+
+Escolha errada da ordem -> índice ignorado.
+
+#### 15) Explique a diferença entre OFFSET pagination e curosr (keyset) pagination, e por que OFFSET degrada drasticamente performance em tabelas grandes.
+
+**OFFSET pagination** usa `LIMIT ... OFFSET ...` e o banco precisa percorrer e descartar linhas anteriores.
+
+Quanto maior o OFFSET, mais linhas o PostgreSQL lê inutilmente -> custo O(n).
+
+**Keyset (cursor) pagination** usa uma condição baseada na última chave lida (`WHERE id > last_id`), permitindo usar índice diretamente.
+
+OFFSET:
+
+- simples
+- mas degrada linearmente
+- instável com inserções concorrentes
+
+Keyset:
+
+- estável
+- usa index scan
+- escala para tabelas grandes
+
+Impacto: OFFSET causa alto I/O, CPU e saturação de conexões
+
+#### 16) O que é connection pooling no PostgreSQL e por que uma aplicação Node.js pode derrubar um banco apenas abrindo muitas conexões simultâneas?
+
+Connection pooling mantém um conjunto fixo de conexões abertas e as reutiliza entre requisições.
+
+No PostgreSQL cada conexão cria um **backend process** no servidor.
+
+Cada processo consome memória (work_mem, shared buffers mapping, stacks) e participa do scheduler do SO.
+
+Muitas conexões simultâneas causam:
+
+- alto consumo de RAM
+- context switching excessivo
+- queda de performance global
+
+Node.js com muitas requisições concorrentes pode abrir centenas de conexões e saturar o banco.
+
+O pool limita concorrência efetiva e transforma milhares de requests em poucas sessões ativas.
+
+Ferramentas comumns: `pg.Pool` (app side) ou `PgBouncer` (server side).
+
+#### 17) Em uma API concorrente, por que transações longas são perigosas no PostgreSQL e como elas afetam diretamente o VACUUM, MVCC e crescimento da tabela?
+
+Uma transação longa mantém um snapshot antigo ativo.
+
+Pelo MVCC, o PostgreSQL não pode remover versões de linhas que ainda possam ser visíveis para essa transação
+
+Assim, o VACUUM não consegue limpar dead tuples cujo `xmin` é anterior ao snapshot.
+
+Consequências:
+
+- acúmulo de dead tuples
+- crescimento da tabela e dos índices (bloat)
+- piora de index scan e cache
+- aumento de I/O
+
+Em casos extremos pode ocorrer **transaction ID wraparound risk**.
+
+Boas práticas:
+
+- transações curtas
+- nunca manter transação aberta aguardando I/O externo
+- evitar `BEGIN` em requests HTTP longos
+
+#### 18) O que é uma replicação (streaming replication) no PostgreSQL, o que é uma read replica, e qual problema ela resolve — e qual problema ela NÃO resolve?
+
+Streaming replication replica continuamente o WAL do servidor primário para um servidor standby.
+
+O standby aplica o WAL (replay) e mantém uma cópia quase em tempo real do banco.
+
+Uma **read replica** é um standby aberto apenas para leitura.
+
+Resolve:
+
+- alta disponibilidade
+- failover
+- escalabilidade de leitura
+
+Não resolve:
+
+- performance de escrita (writes continuam no primário)
+- queries lentas mal otimizadas
+
+Existe atraso (replication lag), então não há consistência forte imediata.
+
+#### 19) O que é failover no PostgreSQL e qual é o risco de perda de dados dependendo do tipo de replicação configurada?
+
+Failover é o processo de promover uma réplica para primária após falha do servidor principal.
+
+Na replicação assíncrona, pode haver perda de dados se o primário cair antes de enviar/aplicar o WAL na réplica.
+
+Na replicação síncrona, o commit só é confirmado após a réplica confirmar recebimento do WAL — reduz risco de perda, mas aumenta latência.
+
+Trade-off:
+
+- assíncrona -> mais rápida, risco de data loss
+- síncrona -> mais segura, maior latência
+
+Failover requer mecanismos de orquestração (ex.: Patroni) e reconfiguração de clientes.
+
+#### 20) O que são migrations com zero downtime no PostgreSQL e por que um simples `ALTER TABLE` pode derrubar uma aplicação em produção?
+
+Zero-downtime migration é alterar o schema sem bloquear operações da aplicação.
+
+Alguns `ALTER TABLE` existem `ACCESS EXCLUSIVE LOCK`, bloqueando SELECT/INSERT/UPDATE.
+
+Enquanto a migration roda, todas as queries aguardam -> fila de conexões -> timeout na API.
+
+Exemplos perigosos:
+
+- adicionar coluna com `DEFAULT` em versões antigas.
+- alterar tipo de coluna
+- `VACUUM FULL`
+- criar índice sem `CONCURRENTLY`
+
+Boas práticas:
+
+- `CREATE INDEX CONCURRENTLY`
+- backfill em etapas
+- deploy compatível com dois schemas
+- migração + código versionados
+
+#### 21) O que são prepared statements no PostgreSQL e por que eles podem melhorar performance — e também causar problemas quando usados incorretamente com pool de conexões?
+
+Prepared statement é uma query previamente **parseada e planejada** pelo PostgreSQL, reutilizada com parâmetros diferentes.
+
+O banco evita repetir:
+
+- parse
+- rewrite
+- plan
+
+Melhora latência e reduz CPU em queries frequentes.
+
+Problema: prepared statements são ligados à sessão (conexão)
+
+Com pool ou PgBouncer (transaction pooling), a próxima execução pode cair em outra conexão -> erro _"prepared statement does not exist_ ou plano incorreto.
+
+Também pode ocorrer **plan caching ruim** (parameter sniffing): o planner fixa um plano não ideal para outros valores.
+
+Uso correto:
+
+- bom para queries muito repetidas
+- cuidado com pools e PgBouncer
+
+#### 22) O que é o problema N+1 queries, por que ORMs frequentemente causam isso, e qual o impacto real no PostgreSQL sob carga concorrente?
+
+N + 1 ocorre quando a aplicação executa 1 query principal e depois uma query adicional para cada registro retornado.
+
+Ex.: busca 100 usuários e faz 100 queries para buscar pedidos de cada um.
+
+ORMs causam isso via lazy loading de relações.
+
+Impacto:
+
+- explosão de round-trips
+- aumento de conexões ativas
+- mais locks e snapshots MVCC
+- saturação de pool
+
+Solução:
+
+- JOINs
+- eager loading
+- batch queries (`IN (...)`)
+- agregações no banco
+
+Não é apenas latência — degrada todo o banco sob concorrência.
+
+#### 23) Como você implementaria idempotência em uma API usando PostgreSQL para evitar, por exemplo, dupla cobrança de pagamento?
+
+Idempotência garante que múltiplas execuções da mesma operação produzam o mesmo resultado.
+
+No banco, é implementado com **chave única + constraint ou idempotency key**.
+
+Exemplo clássico:
+
+```sql
+CREATE UNIQUE INDEX idx_payment_idempotency
+ON payments(idempotency_key);
+```
+
+Na API:
+
+- primeira requisição insere
+- segunda falha por unique violation
+- aplicação trata o erro e retorna resultado já existente
+
+Alternativamente:
+
+- `INSERT ... ON CONFLICT DO NOTHING`
+- ou `ON CONFLICT DO UPDATE`
+
+UPDATE condicional sozinho não é suficiente sob concorrência real.
+
+#### 24) Como você implementaria uma fila (queue) usando PostgreSQL, garantindo que múltiplos workers processem jobs sem pegar o mesmo item duas vezes?
+
+A fila é implementada com uma tabela de jobs e consumo usando `SELECT ... FOR UPDATE SKIP LOCKED`.
+
+Cada worker inicia uma transação, seleciona um job pendente, bloqueia a linha e a marca como em processamento.
+
+`SKIP LOCKED` faz outros workers ignorarem linhas já bloqueadas.
+
+```sql
+SELECT * FROM jobs
+WHERE status = 'pending'
+ORDERY BY id
+FOR UPDATE SKIP LOCKED
+LIMIT 1
+```
+
+Isso garante que dois workers não processem o mesmo job.
+
+Após processar: `UPDATE jobs SET status='done'`
+
+- simples
+- consistente
+- limitado por throughput do banco

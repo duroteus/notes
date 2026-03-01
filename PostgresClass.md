@@ -96,8 +96,8 @@ UPDATE users SET name = 'Ana Maria' WHERE id = 1;
 
 O PostgreSQL:
 
-**1.** cria nova versão da linha <br>
-**2.** marca a antiga com `xmax = tx_id` <br>
+**1.** cria nova versão da linha
+**2.** marca a antiga com `xmax = tx_id`
 
 Enquanto houver uma transação ativa que começou antes do commit, aquela versão antiga ainda pode ser visível.
 
@@ -137,10 +137,10 @@ Elas continuam dentro do arquivo físico da tabela (`heap file`).
 
 O VACUUM:
 
-**1.** varre página por página do heap <br>
-**2.** verifica visibility (usando xmin/xmax) <br>
-**3.** confirma que nenhuma transação precisa mais daquela versão <br>
-**4.** marca o espaço como reutilizável (free space map) <br>
+**1.** varre página por página do heap
+**2.** verifica visibility (usando xmin/xmax)
+**3.** confirma que nenhuma transação precisa mais daquela versão
+**4.** marca o espaço como reutilizável (free space map)
 
 Importante:
 
@@ -300,8 +300,8 @@ UPDATE orders SET status = 'paid' WHERE id = 10;
 
 O PostgreSQL:
 
-**1.** escreve no WAL <br>
-**2.** altera a página na **RAM** (shared_buffers) <br>
+**1.** escreve no WAL
+**2.** altera a página na **RAM** (shared_buffers)
 
 Ele **não grava imediatamente na tabela física**.
 
@@ -437,11 +437,11 @@ Se houver crash:
 
 #### Os níveis no PostgreSQL
 
-O padrão SQL define: <br>
-**1.** READ UNCOMMITTED <br>
-**2.** READ COMMITTED <br>
-**3.** REPEATABLE READ <br>
-**4.** SERIALIZABLE <br>
+O padrão SQL define:
+**1.** READ UNCOMMITTED
+**2.** READ COMMITTED
+**3.** REPEATABLE READ
+**4.** SERIALIZABLE
 
 O PostgreSQL na prática oferece **3 comportamentos reais:**
 
@@ -717,9 +717,9 @@ SELECT * FROM users WHERE email = 'ana@email.com';
 
 O banco:
 
-**1.** consulta a B-tree <br>
-**2.** encontra ponteiro da linha <br>
-**3.** vai até o heap buscar a tupla <br>
+**1.** consulta a B-tree
+**2.** encontra ponteiro da linha
+**3.** vai até o heap buscar a tupla
 
 Problema:
 isso gera **acesso aleatório ao disco.**
@@ -774,3 +774,1588 @@ o planner escolhe plano errado.
 Sintomas clássico:
 
 > query ficou lenta sem mudar código.
+
+### Como o PostgreSQL decide executar uma query
+
+Toda vez que você roda:
+
+```sql
+SELECT * FROM orders WHERE status = 'paid';
+```
+
+o PostgreSQL **não sai executando imediatamente**.
+
+Antes existe uma etapa crítica chamada:
+
+> query planning (otimização de plano)
+
+O banco precisa decidir:
+
+- usar índice?
+- fazer seq scan?
+- nested loop ou hash join?
+- qual ordem de joins?
+
+E aqui está o ponto mais importante:
+
+**o planner não olha a tabela para decidir**
+
+Se ele fosse ler a tabela para decidir, já teria executado a query.
+
+Então ele usa uma coisa intermediária: **estatísticas**.
+
+#### Onde entram as estastísticas
+
+O PostgreSQL mantém um resumo matemático das tabelas no catálogo interno: `pg_statistic`
+
+Quem cria esse resumo é o `ANALYZE`.
+
+O `ANALYZE` **não lê a tabela inteira**.
+Ele faz amostragem e tenta responder:
+
+> "Se alguém filtrar esta coluna, quantas linhas provavelmente vão aparecer?"
+
+Ele coleta:
+
+##### 1) MCV — Most Common Values
+
+Valores mais frequentes.
+
+| valor     | frequencia |
+| --------- | ---------- |
+| paid      | 92%        |
+| pending   | 7%         |
+| cancelled | 1%         |
+
+---
+
+##### 2) Histogram
+
+Distribuição dos demais valores (usado para ranges)
+
+Exemplo: `created_at > '2025-01-01'
+
+---
+
+##### 3) ndistinct
+
+Qualidade estimada de valores únicos.
+
+Importante para saber se índice vale a pena.
+
+---
+
+##### 4) null_frac
+
+Percentual de NULLs
+
+Afeta seletividade de filtros.
+
+---
+
+#### O que o planner realmente quer saber
+
+Ele não quer saber **o valor**.
+Ele quer saber quantas linhas a query vai retornar.
+
+Isso se chama: **cardinality estimation**.
+
+E isso decide o plano.
+
+#### Como a estimativa decide o plano
+
+```sql
+SELECT * FROM orders WHERE status = 'paid'
+```
+
+Estastística:
+`paid = 92%`
+
+O planner calcula:
+
+>
+
+### Índices do PostgreSQL
+
+:one: **B-Tree (90% dos casos)**
+
+```sql
+CREATE index (idx_users_email) ON users(email)
+```
+
+Otimiza:
+
+```
+WHERE email = ?
+WHERE created_at > ?
+ORDER BY created_at
+```
+
+Ele funciona bem porque mantém ordenação.
+
+Use para:
+
+- PK
+- FK
+- datas
+- buscas exatas
+
+:two: **Hash**
+
+```sql
+CREATE INDEX idx_users_email_hash ON users USING HASH(email)
+```
+
+Só acelera:
+
+```
+WHERE email = ?
+```
+
+Não serve para range nem ordenação.
+Na prática quase nunca compensa usar em vez de B-Tree.
+
+:three: **GIN (muito importante em APIs modernas)**
+
+Exemplo JSONB:
+
+```sql
+CREATE INDEX idx_products_attrs ON products USING GIN(attributes)
+```
+
+Consulta:
+
+```sql
+WHERE attributes @> '{"color": "red"}'
+```
+
+Sem GIN -> full table scan.
+
+Também usado para:
+
+- tags
+- arrays
+- busca textual (`to_tsvector`)
+
+:four: **GiST**
+Usado quando você não quer igualdade, mas **proximidade**.
+
+Exemplo:
+
+- distância geográfica
+- ranges de data
+- similaridade
+
+Comum em PostGIS
+"restaurantes perto de mim".
+
+:five: **BRIN (muito subestimado)**
+Para tabela enorme:
+
+```sql
+logs (timestamp, ...)
+```
+
+Inserções sempre crescentes.
+
+```sql
+CREATE INDEX idx_logs_time ON logs USING BRIN(timestamp)
+```
+
+Ele não indexa cada linha
+Ele indexa **blocos de páginas**.
+
+Resultado:
+
+- índice minúsculo
+- escrita barata
+- ótimo para time-series
+
+#### Impacto em produção
+
+Índice também tem custo:
+
+Cada `INSERT/UPDATE`:
+
+- atualiza todos os índices
+- gera WAL
+- aumenta checkpoint
+
+Índice demais -> write performance piora.
+
+#### O comportamento normal de um índice
+
+Mesmo quando um índice é usado:
+
+```sql
+SELECT email FROM users WHERE email = 'ana@email.com';
+```
+
+O PostgreSQL:
+
+**1.** consulta a B-Tree
+**2.** encontra o ponteiro (TID)
+**3.** vai até a tabela (heap) buscar a linha
+
+Ou seja:
+
+> Índice não guarda a linha, só o endereço dela.
+
+Isso se chama:
+**heap fetch**
+
+E isso custa caro.
+
+#### Quando ocorre Index Only Scan
+
+Se você criar:
+
+```sql
+CREATE INDEX idx_users_email ON users(email);
+```
+
+E a query pedir **apenas a coluna do índice**:
+
+```sql
+SELECT email FROM users WHERE email = 'ana@email.com';
+```
+
+O PostgreSQL _pode_ evitar acessar a tabela.
+
+Plano esperado:
+
+```
+Index Only Scan using idx_users_email
+```
+
+Mas aqui entra o MVCC.
+
+#### O problema da visibilidade
+
+O índice não sabe se a linha ainda é visível para sua transação.
+(lembrando: múltiplas versões da mesma linha existem)
+
+Então o PostgreSQL precisa confirmar:
+
+> essa tupla não foi deletada ou atualizada depois?
+
+Quem fornece essa informação é o **visibility map**.
+
+Ele marca páginas do heap como:
+
+- todas as linhas visíveis
+- seguras para leitura direta
+
+#### Quem atualiza o visibility map?
+
+**VACUUM**.
+
+Se o autovacuum não estiver rodando bem:
+
+o plano vira:
+
+```
+Index Scan + Heap Fetch
+```
+
+Ou seja:
+o banco volta a acessar a tabela -> perde performance.
+
+Por isso existe um fenômeno real:
+
+> banco com índice correto mas SELECT lento
+
+Frequentemente é **autovacuum atrasado**.
+
+#### Impacto prático
+
+Index Only Scan:
+
+- reduz I/O
+- melhora cache hit
+- melhora latência
+
+Mas depende diretamente de:
+
+- MVCC
+- dead tuples
+- VACUUM
+
+É por isso que PostgreSQL não é só "criar índice".
+
+#### Partial Index (muito útil em produção)
+
+Imagine tabela:
+
+`orders`
+
+- 95% = `delivered`
+- 5% = `open`
+
+API mais comum:
+
+```sql
+SELECT * FROM orders
+WHERE user_id = 10 AND status = 'open';
+```
+
+Se você fizer índice normal:
+
+```sql
+CREATE INDEX idx_orders_status_user ON orders(status, user_id);
+```
+
+O índice fica enorme e cada `INSERT/UPDATE` paga custo alto.
+
+Agora:
+
+```sql
+CREATE INDEX idx_orders_open_user
+ON orders(user_id)
+WHERE status = 'open';
+```
+
+Você indexa só o que realmente consulta.
+
+Quando uma linha deixa de satisfazer a condição do partial index, o PostgreSQL remove a entrada correspondente do índice.
+
+Isso ocorre durante o UPDATE, como parte da manutenção normal de índices.
+
+Internamente:
+
+- o UPDATE cria nova versão da tupla (MVCC)
+- a versão antiga vira dead tuple
+- o índice é atualizado conforme a nova versão atende (ou não) ao predicado
+
+O índice continua existindo; apenas aquela linha deixa de fazer parte dele.
+
+Benefícios:
+
+- índice pequeno
+- menos WAL
+- menos checkpoint
+- mais cache
+
+Muito usado em:
+
+- filas
+- soft delte (`deleted_at IS NULL`)
+- registros ativos
+
+#### Composite Index (ordem crítica)
+
+B-Tree é ordenada.
+
+Índice:
+
+```sql
+(user_id, created_at)
+```
+
+Fisicamente fica:
+
+```
+user_id 1 -> todas as datas
+user_id 2 -> todas as datas
+user_id 3 -> todas as datas
+```
+
+Então funciona bem:
+
+```sql
+WHERE user_id = 10
+WHERE user_id = 10 AND created_at > now()-interval '7 days'
+ORDER BY created_at
+```
+
+Mas não:
+
+```sql
+WHERE created_at > now()-interval '7 days'
+```
+
+Porque o banco não consegue pular direto — teria que percorrer todo o índice.
+
+#### Regra prática (muito perguntada)
+
+Coluna mais seletiva primeiro?
+**Não exatamente.**
+
+A regra real:
+
+> coloque primeiro a coluna mais usada como filtro inicial das queries
+
+#### Impacto real em backend
+
+Índice composto errado gera:
+
+- Seq Scan inesperado
+- alto CPU
+- aumento de latência
+- pool de conexões saturando
+
+E normalmente o dev diz:
+
+> "mas eu já criei índice..."
+
+### Paginação: OFFSET x Keyset
+
+#### OFFSET pagination
+
+Exemplo clássico:
+
+```sql
+SELECT * FROM orders
+ORDER BY id
+LIMIT 20 OFFSET 100000;
+```
+
+O que o PostgreSQL faz:
+
+Ele **não pula\*\*** 100 mil linhas.
+
+Ele:
+
+1. percorre 100000 linhas
+2. descarta
+3. só então retorna 20
+
+Ou seja:
+
+- lê indice
+- faz heap fetch
+- joga fora tudo
+
+Página 1 -> rápida
+Página 5000 -> extremamente lenta
+
+E piora:
+cada usuário acessando páginas altas repete esse custo.
+
+#### Outro problema (concorrência)
+
+Se novas linhas forem inseridas:
+
+- usuário pode ver registros duplicados
+- ou pular registros
+
+OFFSET não é determinístico sob escrita concorrente.
+
+#### Keyset / Cursor pagination
+
+Você usa a última chave retornada:
+
+```sql
+SELECT * FROM orders
+WHERE id > 100000
+ORDER BY id
+LIMIT 20;
+```
+
+Agora o banco:
+
+- vai direto no índice
+- continua a partir d oponto
+- não precisa percorrer o passado
+
+Complexidade:
+
+**O(log n)** ao invés de **O(n)**.
+
+#### Por que escala muito melhor
+
+O índice B-Tree já é ordenado.
+
+O banco só faz:
+
+> continuar a navegação da árvore
+
+Nenhum descarte de linhas.
+
+#### Impacto real em backend
+
+OFFSET grande gera:
+
+- seq scan parcial
+- alto tempo de query
+- pool de conexões ocupado
+- aumento de latência global da API
+
+Sintoma típico:
+
+> endpoint de listagem derruba o sistema em horário de pico.
+
+### Pool de conexões
+
+Aqui está a parte crítica:
+
+PostgreSQL **não é thread-based como MySQL**.
+
+Ele funciona assim:
+
+```
+1 conexão TCP -> 1 processo do PostgreSQL
+```
+
+Se você tiver:
+
+- 300 conexões
+- você tem 300 processos no servidor
+
+Cada processo:
+
+- tem memória própria
+- participa do scheduler do Linux
+- mantém transação e snapshot MVCC
+
+#### Por que Node.js agrava isso
+
+Node.js é altamente concorrente:
+
+- 1 servidor
+- milhares de requests simultâneos
+
+Se você fizer:
+
+```js
+new Client().connect(); // por request
+```
+
+Cada request abre uma conexão nova.
+
+Resultado real em produção:
+
+- 800 conexões abertas
+- banco fica lento
+- CPU do DB 100%
+- queries simples demoram
+
+Não é a query
+É o **gerenciamento de processos do banco**.
+
+#### O que o pool resolve
+
+O pool faz:
+
+```
+1000 requisições web
+↓
+20 conexões reais no banco
+↓
+fila interna na aplicação
+```
+
+Ou seja:
+Você limita a concorrência no ponto correto: **antes do banco**.
+
+Isso melhora:
+
+- latência global
+- estabilidade
+- uso de memória
+- lock contetion
+
+#### PgBouncer (muito perguntado)
+
+**O problema real que existe sem PgBouncer**
+
+Você tem:
+
+- API Node.js
+- 4 pods
+- cada pod com pool = 20 conexões
+
+Total:
+
+```
+4 x 20 = 80 conexões no PostgreSQL
+```
+
+Até aqui tudo bem.
+
+Agora acontece algo normal em produção:
+
+- pico de tráfego
+- autoscaling
+
+Você sobe pra **20 pods**.
+
+Agora:
+
+```
+20 x 20 = 400 conexões abertas no banco
+```
+
+No PostgreSQL isso é grave porque:
+
+> conexão não é só um socket — é um processo inteiro do servidor.
+
+O banco agora tem 400 processos competindo por:
+
+- CPU
+- memória
+- locks
+- buffer cache
+
+Mesmo que as queries sejam leves, o banco degrada.
+Ele passa mais tempo **gerenciando conexões do que executando SQL**.
+
+**O que o PGBouncer faz (de forma concreta)**
+Ele vira um **multiplexador de conexões**.
+
+Arquitetura:
+
+```
+Clientes (Node)
+        ↓
+PgBouncer
+        ↓
+PostgreSQL
+```
+
+Agora:
+
+- Node pode abrir 400 conexões
+- mas o PgBouncer mantém **ex.: 30 conexões reais no banco**
+
+Ou seja:
+
+```
+400 sessões lógicas -> 30 sessões físicas
+```
+
+O segredo:
+
+O PgBouncer **não mantém a conexão presa ao cliente o tempo inteiro**.
+Ele só usa uma conexão real **durante a execução da query**.
+
+Terminou a query:
+
+- a conexão volta ao pool
+- outro cliente usa a mesma
+
+Isso funciona porque a maioria das APIs faz:
+
+```
+query curta -> resposta -> acabou
+```
+
+Você não precisa de uma sessão dedicada permanente
+
+**Por que isso é especialmente importante no PostgreSQL**
+Porque o PostgreSQL:
+
+- não foi projetado para milhares de conexões
+- foi projetado para **poucas conexões ativas bem utilizadas**
+
+Na prática:
+
+| Conexões | Efeito                |
+| -------- | --------------------- |
+| 20-50    | ótimo                 |
+| 100-200  | aceitável             |
+| 400+     | degradação séria      |
+| 1000+    | quase sempre instável |
+
+Não é CPU da query
+É **overhead de processos + memória + locks + snapshots MVCC**.
+
+**O modelo interno do PostgreSQL**
+O PostgreSQL usa:
+
+> **process-per-connection**
+
+Cada conexão cria um processo do sistema operacional (`postgres: backend`).
+
+Então 1000 conexões = **1000 processos reais no Linux**.
+
+Não são threads leves.
+São processos completos:
+
+- memória própria
+- pilha
+- descritores de arquivo
+- contexto de execução
+- snapshot do MVCC
+
+**O que acontece numa máquina poderosa?**
+
+Imagine:
+
+- 32 cores
+- 128 GB RAM
+- NVMe rápido
+
+Você pode pensar:
+
+> aguenta 1000 conexões fácil
+
+Na prática não.
+
+Porque o gargalo vira outro: **agendamento do sistema operacional (scheduler)**.
+
+O Linux precisa:
+
+- pausar processos
+- restaurar contexto
+- alternar CPU (context switch)
+
+Com centenas de backends:
+
+O banco passa muito tempo fazendo:
+**gerenciamento de concorrência**, não execução de query.
+
+Isso gera:
+
+- aumento de latência
+- queda de throughput total
+
+Isso é chamado:
+
+> connection trashing
+
+**O segundo problema (mais importante ainda)**
+Cada backend mantém:
+
+- memória local
+- estruturas de lock
+- snapshot de transações
+
+Especialmente:
+**MVCC snapshot tracking**
+
+O PostgreSQL precisa saber:
+
+> qual a transação mais antiga ainda ativa?
+
+Porque ele não pode remover versões que ainda podem ser visíveis.
+
+Com muitas conexões abertas (mesmo ociosas), o banco assume que alguma pode precisar de dados antigos.
+
+Resultado:
+
+VACUUM não consegue limpar.
+
+Consequência direta
+
+- dead tuples acumulam
+- tabela cresce
+- índice cresce
+- cache piora
+- queries ficam mais lentas
+
+Isso acontece mesmo com CPU sobrando.
+
+**Então mais hardware resolve?**
+Ajuda, mas não resolve.
+
+Você ganha:
+
+- mais buffer cache
+- mais I/O
+
+Mas não elimina:
+
+- context switching
+- lock tables maiores
+- MVCC visibility tracking
+- gerenciamento de snapshots
+
+Por isso todos os guias oficiais e DBAs dizem:
+
+> PostgreSQL escala melhor em **conexões ativas pequenas + queries rápidas**, não em muitas conexões simultâneas.
+
+**Número típico recomendado**
+Produção comum:
+
+| Tipo de servidor | Conexões ativas ideais |
+| ---------------- | ---------------------- |
+| pequeno          | 20-50                  |
+| médio            | 50-100                 |
+| grande           | 100-200                |
+
+Acima disso normalmente:
+você não ganha throughput — você perde.
+
+Por isso PgBouncer não é otimização.
+Ele é **parte da arquitetura padrão de produção** em PostgreSQL.
+
+#### Diferença entre pool de aplicação e PgBouncer
+
+##### Pool do Node (`pg.Pool`)
+
+Controla concorrência **dentro de um único processo Node**.
+
+Ele não sabe:
+
+- quantos pods existem
+- quantos serviços existem
+- quantos workers existem
+
+Cada instância cria o próprio pool -> o total explode.
+
+##### PgBouncer
+
+Controla concorrência **global do banco**.
+
+Ele vira o "porteiro":
+
+> "O banco só vai trabalhar com 30 pessoas ao mesmo tempo, não importa quantos clientes cheguem."
+
+Isso estabeliza:
+
+- latência
+- VACUUM
+- checkpoints
+- locks
+
+### O problema de transações longas
+
+Lembre do MVCC:
+
+cada transação enxerga o banco como ele estava **no momento do BEGIN**.
+
+Exemplo:
+
+Transação A:
+
+```sql
+BEGIN;
+SELECT * FROM orders; -- snapshot tirado agora
+```
+
+Ela fica aberta (ex.: usuário abriu página e deixou o navegador parado)
+
+Enquanto isso o sistema continua:
+
+```sql
+UPDATE orders ...
+DELETE orders ...
+INSERT orders ...
+```
+
+O banco vai criando:
+
+- novas versões
+- e versões antigas virando dead tuples
+
+O banco vai criando:
+
+- novas versões
+- e versões antigas virando dead tuples
+
+Normalmente o VACUUM limparia.
+
+Mas aqui está o ponto crítico:
+
+> O PostgreSQL não pode apagar uma linha antiga se ainda existir uma transação que possa enxergá-la.
+
+A transação A ainda pode ver o banco antigo.
+
+Então o VACUUM fica impedido.
+
+#### O efeito dominó
+
+Quanto mais tempo a transação fica aberta:
+
+1. mais versões antigas acumulam
+2. tabela cresce
+3. índice cresce
+4. cache piora
+5. queries ficam mais lentas
+6. checkpoint mais pesado
+7. WAL cresce
+
+Você começa a observar:
+
+> "o banco foi ficando lento ao longo do dia"
+
+Muito comum em APIs que:
+
+- abrem transação
+- chamam serviço externo
+- aguardam fila
+- fazem upload
+- ou usam ORM mal configurado
+
+#### O caso clássico em Node.js
+
+Erro típico:
+
+```js
+BEGIN
+SELECT ...
+await chamarAPIexterna() // 3 segundos
+UPDATE ...
+COMMIT
+```
+
+Durante esses 3 segundos:
+o banco inteiro fica impedido de limpar versões antigas.
+
+Com várias requisições -> degradação global.
+
+##### O pior cenário
+
+Se durar horas:
+
+o banco se aproxima do:
+**transaction id wraparound**
+
+O PostgreSQL entra em modo de proteção:
+ele começa a bloquear writes para evitar corrupção.
+
+Ou seja:
+uma única conexão esquecida pode degradar todo o banco.
+
+### Replicas
+
+Lembra do WAL?
+
+Toda alteração no PostgreSQL primeiro vai para o WAL
+
+O primário faz:
+
+```
+UPDATE -> grava WAL -> commit
+```
+
+Na replicação:
+
+o primário também **envia o WAL via rede** para outro servidor.
+
+O standby recebe:
+
+```
+recebe WAL -> reexecuta alterações -> atualiza seus data files
+```
+
+Ele não executa SQL da aplicação.
+Ele apenas **reaplica as mudanças**.
+
+Isso se chama:
+
+> physical streaming replication
+
+#### O que é uma read replica
+
+Você pode conectar sua aplicação nela:
+
+- SELECT permitido
+- UPDATE/INSERT/DELETE proibido
+
+Arquitetura:
+
+```
+API
+ ├── writes → primary
+ └── reads → replica
+```
+
+Muito usado em:
+
+- dashboards
+- relatórios
+- listagens grandes
+- analytics
+
+#### O que ela resolve
+
+1. Alta disponibilidade
+   Se o primário cair -> promove standby (failover)
+2. Escala leitura
+   Você tira carga de SELECT pesado do primário
+
+#### O que ele NÃO resolve (pegadinha clássica)
+
+Ela não ajuda em:
+
+- UPDATE lento
+- locks
+- deadlocks
+- checkpoint
+- VACUUM
+- escrita intensa
+
+Porque **todo write ainda acontece no primário**.
+
+#### Replication Lag
+
+Como o WAL precisa:
+
+- ser enviado
+- aplicado
+
+pode existir atraso.
+
+O usuário escreve:
+
+```
+POST /order
+```
+
+logo depois:
+
+```
+GET /order
+```
+
+Se o GET bater na replica -> pode não encontrar.
+
+Isso chama:
+
+> eventual consistency
+
+Aplicações precisam lidar com isso.
+
+### Failover
+
+#### O cenário
+
+Arquitetura:
+
+```
+Primary -> envia WAL -> Standby
+```
+
+Se o primary morre:
+
+- standby ainda está rodando
+- mas é read-only
+
+Failover significa:
+
+> promover standby a primary
+
+Ele passa a aceitar writes.
+
+#### O ponto crítico: risco de perda de dados
+
+##### Replicação assíncrona (default)
+
+Fluxo:
+
+```
+commit no primary
+↓
+responde cliente
+↓
+envia WAL para replica
+```
+
+Se o primary cair entre:
+
+- commit
+- envio do WAL
+
+O standby nunca recebeu aquela transação.
+
+Se promovido:
+-> você perdeu dados confirmados ao cliente.
+
+Isso é chamado:
+
+> window of data loss
+
+##### Replicação síncrona
+
+Fluxo
+
+```
+commit
+↓
+envia WAL
+↓
+replica confirma recebimento
+↓
+primary responde cliente
+```
+
+Agora não há perda (no limite de nós sincronizados)
+Mas custo:
+
+- commit mais lento
+- depende da latência da rede
+- risco de bloquear se replica ficar indisponível
+
+#### Outro ponto crítico
+
+Failover não é automático por padrão
+
+Você precisa:
+
+- monitoramento
+- orquestrador
+- reconfiguração de DNS ou load balancer
+
+Senão a aplicação continua tentando conectar no primary morto.
+
+#### Conclusão arquitetural
+
+| Sistema          | Estratégia |
+| ---------------- | ---------- |
+| financeiro       | síncrona   |
+| e-commerce comum | assíncrona |
+| analytics        | assíncrona |
+
+Sempre há trade-off entre **durabilidade vs latência**
+
+### Migrations
+
+#### O que derruba a aplicação
+
+Você executa
+
+```sql
+ALTER TABLE users ADD COLUMN age INT;
+```
+
+O PostgreSQL precisa garantir consistência estrutural.
+
+Ele pega:
+
+> `ACCESS EXCLUSIVE LOCK`
+
+Isso significa:
+
+- ninguém lê
+- ninguém escreve
+- ninguém atualiza
+
+Não é só a tabela:
+as conexões ficam esperando.
+
+No backend você vê:
+
+- pool esgotado
+- requisições acumulando
+- CPU da API sobe
+- usuários recebem timeout
+
+A aplicação não caiu
+Ela **ficou bloqueada pelo banco**.
+
+#### Outro exemplo comum
+
+Criar índice:
+
+```sql
+CREATE INDEX idx_orders_user ON orders(user_id)
+```
+
+O PostgreSQL:
+
+- lê a tabela inteira
+- mantém lock de escrita
+
+Em tabela grande -> minutos de bloqueio.
+
+#### Forma correta
+
+```sql
+CREATE INDEX CONCURRENTLY idx_orders_user ON orders(user_id);
+```
+
+Agora:
+
+- tabela continua operando
+- banco cria índice em background
+- sem travar a API
+
+#### Mudança de coluna (o mais perigoso)
+
+```sql
+ALTER TABLE orders ALTER COLUMN price TYPE numeric(12,2)
+```
+
+Isso força **table rewrite**:
+
+- copia toda a tabela
+- bloqueia
+- WAL gigante
+- checkpoint pesado
+
+Pode travar produção por horas.
+
+#### Estratégia real de zero-downtime
+
+Você faz em fases:
+
+1. adiciona nova coluna nullable
+2. código passa a escrever nas duas
+3. backfill em batches
+4. muda leitura
+5. remove coluna antiga
+
+Compatibilidade dupla temporária
+
+#### Por que isso é crítico
+
+A maioria dos incidentes de banco em produção não é query lenta é **migration bloqueante**.
+
+### Prepared Statements
+
+Quando você executa normalmente:
+
+```sql
+SELECT * FROM orders WHERE user_id = 10;
+```
+
+O PostgreSQL faz 3 etapas toda vez:
+
+1. **parse** - entende o SQL
+2. **plan** - decide índice/scan/join
+3. **execute**
+
+Isso custa CPU.
+
+#### O prepared statement
+
+Você prepara uma vez:
+
+```sql
+PREPARE get_orders(int) AS
+SELECT * FROM orders WHERE user_id = $1;
+```
+
+Depois:
+
+```sql
+EXECUTE get_orders(10);
+EXECUTE get_orders(20);
+EXECUTE get_orders(30);
+```
+
+Agora o banco:
+
+- não reinterpreta SQL
+- não recalcula plano toda vez
+
+Ganho real:
+APIs com milhares de requests por segundo.
+
+Drivers como `pg` do Node já fazem isso implicitamente.
+
+#### O problema com pool / PgBouncer
+
+Prepared statement vive **dentro da conexão**.
+
+Mas com PgBouncer em _transaction pooling_:
+
+request A:
+
+```
+usa conexão 3 -> prepara statement
+```
+
+request B:
+
+```
+vai para conexão 7 -> statement não existe
+```
+
+Erro clássico:
+
+```
+prepared statement "S_1" does not exist
+```
+
+Ou pior, plano cacheado para um valor raro.
+
+Exemplo:
+`user_id = 1` -> 500k linhas
+`user_id = 9999` -> 2 linhas
+
+O planner escolhe plano baseado no primeiro uso e reutiliza para todos -> query fica lenta.
+
+Isso se chama **parameter sniffing / generic plan problem**.
+
+#### Quando usar
+
+Bom:
+
+- queries muito frequentes
+- lookup por id
+
+Cuidado:
+
+- queries altamente variáveis
+- PgBouncer transaction pooling
+
+Soluções comuns:
+
+- desabilitar prepare no driver
+- usar PgBouncer session mode
+- `prepareThreshold` tuning
+
+### O problema de N+1 queries
+
+Você faz:
+
+```sql
+SELECT * FROM users;
+```
+
+A aplicação recebe 100 usuários.
+
+O código então faz:
+
+```sql
+SELECT * FROM orders WHERE user_id = 1;
+SELECT * FROM orders WHERE user_id = 2;
+SELECT * FROM orders WHERE user_id = 3;
+...
+```
+
+Resultado:
+
+**1 + 100 = 101 queries**
+
+O banco não sofre por uma query pesada
+Ele sofre por **muitas queries pequenas simultâneas**.
+
+#### Por que ORMs causam
+
+Exemplo típico (pseudo-ORM)
+
+```js
+const users = await User.findAll();
+
+for (const user of users) {
+  await user.getOrders();
+}
+```
+
+Isso ativa lazy loading.
+
+Cada iteração:
+
+- abre transação
+- pega conexão
+- cria snapshot
+- executa query
+- libera
+
+Sob 200 requisições recorrentes:
+
+```
+200 requests x 101 queries = 20.200 queries quase simultâneas
+```
+
+Agora o problema deixa de ser SQL.
+
+Vira:
+
+- pool esgotado
+- context switching
+- WAL flush frequente
+- autovacuum atrasado
+
+#### Forma correta
+
+Banco foi feito para resolver reclação:
+
+```sql
+SELECT u.*, o.*
+FROM users u
+LEFT JOIN orders o ON o.user_id = u.id;
+```
+
+Ou:
+
+```sql
+SELECT * FROM orders
+WHERE user_id IN (1,2,3,4,...);
+```
+
+Uma query mais pesada é melhor do que centenas pequenas.
+
+#### Impacto real em produção
+
+Sintomas clássicos:
+
+- CPU do banco sobe
+- queries simples ficam lentas
+- número de conexões aumenta
+- "mas a query individual é rápida"
+
+O problema é **multiplicação concorrente**, não custo unitário.
+
+### Idempotência no PostgreSQL
+
+---
+
+#### Estratégia 1 — Idempotency Key
+
+Cliente envia:
+
+```json
+{
+  "amount": 100,
+  "idempotency_key": "abc-123"
+}
+```
+
+No banco:
+
+```sql
+CREATE UNIQUE INDEX idx_idempotency
+ON payments(idempotency_key)
+```
+
+Inserção:
+
+```sql
+INSERT INTO payments (...)
+VALUES (...)
+ON CONFLICT (idempotency_key)
+DO NOTHING;
+```
+
+Se já existir:
+
+- a operação não duplica
+- você retorna o pagamento existente
+
+---
+
+#### Estratégia 2 — Unique constraint lógica
+
+Exemplo:
+
+```sql
+CREATE UNIQUE INDEX idx_unique_order
+ON payments(order_id)
+```
+
+Agora duas cobranças para o mesmo pedido:
+
+- segunda falha
+- banco garante integridade
+
+---
+
+#### Estratégia 3 — Lock explícito
+
+Para casos complexos:
+
+```sql
+SELECT ... FOR UPDATE;
+```
+
+Ou advisory lock.
+
+---
+
+#### O ponto importante
+
+Idempotência **não é lógica de aplicação**
+
+É restrição garantida pelo banco.
+
+Se depender só de:
+
+```sql
+UPDATE ... WHERE status = 'pending'
+```
+
+sob concorrência alta você pode ter:
+
+- race condition
+- dupla execução
+- inconsistência
+
+### Fila usando PostgreSQL
+
+Tabela:
+
+```
+jobs
+(id, payload, status, created_at)
+```
+
+Status:
+
+- pending
+- processing
+- done
+- failed
+
+#### O erro comum
+
+Workers fazem:
+
+```sql
+SELECT * FROM jobs WHERE status='pending' LIMIT 1;
+```
+
+Problema:
+
+Dois workers podem pegar o mesmo job simultaneamente.
+
+Race condition.
+
+#### A solução do PostgreSQL
+
+Worker:
+
+```sql
+BEGIN;
+
+SELECT id, payload
+FROM jobs
+WHERE status='pending'
+ORDER BY id
+FOR UPDATE SKIP LOCKED
+LIMIT 1;
+```
+
+O que acontece:
+
+- a linha selecionada recebe **row lock**.
+- outros workers não esperam
+- eles pulam (skip) e pegam outro job
+
+Agora:
+
+```sql
+UPDATE jobs
+SET status='processing'
+WHERE id = ?;
+
+COMMIT;
+```
+
+O lock impede duplicação
+
+#### Por que funciona
+
+`FOR UPDATE`:
+bloqueia linha
+
+`SKIP LOCKED`:
+evita fila de espera
+
+Sem `SKIP LOCKED`:
+os workers ficariam bloqueados uns nos outros.
+
+#### Benefícios
+
+- transacional
+- sem duplicação
+- sem serviço externo
+- respeita ACID
+
+#### Limitações
+
+Não substitui Kafka/RabbitMQ quando:
+
+- milhões de jobs/minuto
+  processamento distribuido pesado
+
+Mas é excelente para:
+
+- emails
+- webhooks
+- retry jobs
+- processamento interno
