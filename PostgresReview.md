@@ -505,3 +505,133 @@ Após processar: `UPDATE jobs SET status='done'`
 - simples
 - consistente
 - limitado por throughput do banco
+
+#### 25) O que é ANALYZE no PostgreSQL, que tipo de estatística ele coleta e por que estatísticas desatualizadas fazem o planner escolher planos ruins?
+
+`ANALYZE` coleta estatísticas das colunas para o query planner estimar cardinalidade.
+
+Ele amostra a tabela e registra:
+
+- distribuição de valores (histogram)
+- valores mais frequentes (MCV list)
+- número de valores distintos (ndistinct)
+- fração de NULLs
+- correlação física
+
+O planner usa essas estatísticas para estimar quantas linhas uma condição retornará
+
+Se a estimativa estiver errada -> escolhe plano errado (Seq Scan vs Index Scan, Nested Loop vs Hash Join).
+
+`autovacuum` executa autoanalyze automaticamente após certo volume de mudanças.
+
+Estatísticas desatualizadas causam slow queries mesmo com índices corretos.
+
+#### 26) O que é o pg_stat_activity e pg_stat_statements, e como você usaria ambos para investigar uma produção lenta?
+
+`pg_stat_activity` mostra as conexões ativas no momento:
+
+- query em execução
+- estado (active, idle, idle in transaction)
+- tempo de execução
+- bloqueios
+
+Usado para identificar:
+
+- queries travadas
+- long transactions
+- lock contention
+- excesso de conexões
+
+`pg_stat_statements` agrega histórico de queries:
+
+- tempo total
+- média
+- número de execuções
+- rows retornadas
+
+Usado para identificar:
+
+- top queries mais custosas
+- N+1 patterns
+- queries frequentes porém lentas
+
+`pg_stat_activity`= visão em tempo real
+`pg_stat_statements` = visão estatística acumulada
+
+#### 27) O que é PITR (Point-in-Time Recovery) no PostgreSQL e como ele utiliza o WAL para restaurar o banco até um ponto específico no tempo?
+
+PITR (Point-in-Time Recovery) permite restaurar o banco para um instante específico.
+
+Ele funciona combinando:
+
+- um backup base (base backup)
+- os arquivos WAL arquivados
+
+O PostgreSQL restaura o backup e depois faz **replay do WAL** até um timestamp ou LSN definido.
+
+Uso típico:
+
+- recuperar deleção acidental
+- erro de migration
+- corrupção lógica
+
+Sem WAL arquivado só é possível restaurar até o momento do backup.
+
+PITR depende de `archive_mode` e `archive_command`.
+
+#### 28) Qual a diferença entre replicação física e replicação lógica no PostgreSQL e quando você escolheria cada uma?
+
+**Replicação física** replica os arquivos do banco a nível de página/bloco via WAL replay.
+
+A réplica é uma cópia binária exata do primário
+
+Usos:
+
+- alta disponibilidade
+- failover
+- read replicas
+
+**Replicação lógica** replica mudanças lógicas (INSERT/UPDATE/DELETE) por tabela/publicação.
+
+Permite filtrar tabelas e consumir em outros sistemas.
+
+Usos:
+
+- migração sem downtime
+- integração com outros bancos
+- CDC (Change Data Capture)
+
+Física:
+
+- simples
+- consistente
+- só leitura
+
+Lógica:
+
+- flexível
+- seletiva
+- maior overhead
+
+#### 29) Por que muitas conexões simultâneas executando transações curtas ainda podem causar contenção de locks e queda de throughput no PostgreSQL, mesmo sem deadlocks?
+
+Mesmo transações curtas competem por:
+
+- row-level locks
+- index page locks
+- WAL flush
+- shared buffers
+- LWLocks internas
+
+Muitas conexões simultâneas aumentam:
+
+- contenção em estruturas internas
+- context switching
+- pressão de CPU
+- esperar por commit (fsync do WAL)
+
+Mesmo sem deadlock, ocorre **lock contention e fila de espera**
+
+Throughput não cresce linearmente com conexões — ele atinge um ponto ótimo e depois degrada.
+
+Mais concorrência ≠ mais performance.

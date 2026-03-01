@@ -24,7 +24,7 @@ SELECT * FROM users WHERE id = 1;
 
 Em muitos bancos tradicionais (modelo lock-based clássico), o `SELECT` ficaria bloqueando esperando o `UPDATE` terminar.
 
-No PostgreSQL -> **isso não acontece**
+No PostgreSQL → **isso não acontece**
 
 O `SELECT` continua instantaneamente.
 
@@ -192,14 +192,14 @@ O PostgreSQL não depende do DBA manualmente.
 O autovacuum:
 
 - monitora o número de UPDATE/DELETE/INSERT
-- quando passa do threshold -> roda VACUUM + ANALYZE
+- quando passa do threshold → roda VACUUM + ANALYZE
 
 Se ele estiver:
 
 - desativado
 - com `cost_limit` muito baixo
 - com tabela muito grande
-  -> o banco lentamente degrada.
+  → o banco lentamente degrada.
 
 Este é o motivo n. 1 de "PostgreSQL ficou lento depois de meses em produção".
 
@@ -233,7 +233,7 @@ Entre o `COMMIT` e a gravação real no arquivo da tabela, ocorre:
 
 **queda de energia**.
 
-Sem WAL -> corrupção lógica;
+Sem WAL → corrupção lógica;
 
 - dinheiro saiu de uma conta
 - não entrou na outra conta
@@ -246,8 +246,8 @@ Antes de alterar a tabela física (`heap`), ele escreve no WAL algo como:
 
 ```
 tx 500:
-page 123: old tuple -> new tuple
-page 456: old tuple -> new tuple
+page 123: old tuple → new tuple
+page 456: old tuple → new tuple
 commit
 ```
 
@@ -275,7 +275,7 @@ O PostgreSQL usa:
 Se o servidor cair:
 na próxima inicialização ele executa:
 
-> crash recovery -> replay do WAL -> restaura o banco ao último commit confirmado.
+> crash recovery → replay do WAL → restaura o banco ao último commit confirmado.
 
 #### Consequência importante
 
@@ -314,7 +314,7 @@ No **checkpoint**.
 
 O processo de background (`checkpointer`) pega milhares de dirty pages e faz:
 
-RAM -> data files (heap/index)
+RAM → data files (heap/index)
 
 Depois disso:
 
@@ -387,7 +387,7 @@ Se você tentar:
 INSERT INTO orders (user_id) VALUES (9999);
 ```
 
-E o user **não existir** -> <span style="color:red">erro</span>.
+E o user **não existir** → <span style="color:red">erro</span>.
 
 A transação falha.
 
@@ -477,7 +477,7 @@ O snapshot é fixo desde o `BEGIN`.
 
 A transação sempre vê a mesma visão do banco, mesmo que outros deem commit.
 
-Implementado com MVCC -> não usa lock pesado.
+Implementado com MVCC → não usa lock pesado.
 
 **SERIALIZIBLE**
 O PostgreSQL usa **SSI (Serializible Snapshot Isolation)**.
@@ -504,7 +504,7 @@ SELECT * FROM orders WHERE price > 100;
 
 Outra transação insere um novo pedido com `price = 150`.
 
-Você executa novamente -> aparece uma linha nova -> phantom.
+Você executa novamente → aparece uma linha nova → phantom.
 
 Isso acontece porque MVCC controla versões de linhas, **não o conjunto lógico do resultado**.
 
@@ -553,7 +553,7 @@ Agora temos:
 
 Nenhuma pode avançar.
 
-Isso é um ciclo de espera -> deadlock
+Isso é um ciclo de espera → deadlock
 
 #### O que o PostgreSQL faz?
 
@@ -672,9 +672,9 @@ Em uma API Node.js com pool de conexões:
 - cada uma abre transação
 - atualiza mesma tabela
 
-Se a ordem de acesso for inconsistente -> deadlock.
-Se transações forem longas -> lock rentention alto.
-Se houver DDL em horário errado -> freeze da aplicação.
+Se a ordem de acesso for inconsistente → deadlock.
+Se transações forem longas → lock rentention alto.
+Se houver DDL em horário errado → freeze da aplicação.
 
 ### E como o PostgreSQL busca os dados nas tabelas?
 
@@ -693,7 +693,7 @@ SELECT * FROM users;
 
 O banco faz:
 
-page 1 -> page 2 -> page 3 -> ... -> fim
+page 1 → page 2 → page 3 → ... → fim
 
 Isso é extremamente eficiente para disco/SSD porque:
 
@@ -747,8 +747,8 @@ Logo, o planner prefere Seq Scan.
 
 #### O fator decisivo: seletividade
 
-Alta seletividade -> índice
-Baixa seletividade -> seq scan
+Alta seletividade → índice
+Baixa seletividade → seq scan
 
 Exemplos ruins para índice:
 
@@ -817,7 +817,7 @@ Ele faz amostragem e tenta responder:
 
 Ele coleta:
 
-##### 1) MCV — Most Common Values
+##### :one: MCV — Most Common Values
 
 Valores mais frequentes.
 
@@ -829,7 +829,7 @@ Valores mais frequentes.
 
 ---
 
-##### 2) Histogram
+##### :two: Histogram
 
 Distribuição dos demais valores (usado para ranges)
 
@@ -837,7 +837,7 @@ Exemplo: `created_at > '2025-01-01'
 
 ---
 
-##### 3) ndistinct
+##### :three: ndistinct
 
 Qualidade estimada de valores únicos.
 
@@ -845,7 +845,7 @@ Importante para saber se índice vale a pena.
 
 ---
 
-##### 4) null_frac
+##### :four: null_frac
 
 Percentual de NULLs
 
@@ -865,15 +865,141 @@ E isso decide o plano.
 #### Como a estimativa decide o plano
 
 ```sql
-SELECT * FROM orders WHERE status = 'paid'
+SELECT * FROM orders WHERE status = 'paid' -- 92% da tabela
 ```
-
-Estastística:
-`paid = 92%`
 
 O planner calcula:
 
->
+> "vou precisar ler quase a tabela inteira"
+
+Então, **Seq Scan é mais barato que índice**.
+
+Agora:
+
+```sql
+SELECT * FROM orders WHERE status = 'cancelled' -- 1% da tabela
+```
+
+> poucas linhas → índice compensa
+
+Ou seja, **o PostgreSQL não escolhe índice por existir índice. Ele escolhe pelo número estimado de linhas.**
+
+#### Onde entram os custos (cost)
+
+Quando você roda:
+
+```sql
+EXPLAIN SELECT * FROM orders WHERE user_id = 10;
+```
+
+Ele não executa. Ele mostra a previsão:
+
+```
+Index Scan using idx_orders_user_id
+(cost=0.42..8.44 rows=5 width=64)
+```
+
+Isso signifca:
+
+- ele estima ~5 linhas
+- custo baixo
+- índice escolhido
+
+O _cost_ é uma unidade interna baseada em:
+
+- I/O esperado
+- CPU esperado
+
+Não é milissegundo.
+
+#### O que acontece na execução real
+
+Agora:
+
+```sql
+EXPLAIN ANALYZE SELECT * FROM orders WHERE user_id = 10;
+```
+
+A query executa de verdade:
+
+```
+(actual time=0.032..0.040 rows=1200 loops=1)
+```
+
+O banco esperava `rows=5`, mas encontrou `rows=1200`.
+
+Aqui ocorreu erro de cardinalidade.
+E isso é gravíssimo.
+Porque o plano foi escolhido com base em 5 linhas, não em 1200.
+
+Consequência:
+
+- nested loop escolhido quando deveria ser hash join
+- index scan quando deveria ser seq scan
+- join order errado
+
+Agora você tem slow query **mesmo com índice correto**.
+
+#### Por que a estimativa ficou errada
+
+Porque o planner confia no `pg_statistic`. E ele depende do `ANALYZE`.
+
+Se a distribuição mudou:
+
+- muitos inserts
+- mudança de comportamento do sistema
+- campnha
+- feature nova
+
+as estastísticas ficam obsoletas.
+
+Então o banco está tomando decisão correta para um banco que **não existe mais**.
+
+#### Quem atualiza automaticamente
+
+O `autovacuum` faz duas coisas diferentes:
+
+```
+VACUUM → limpa dead tuples (MVCC)
+ANALYZE → atualiza estatísticas (planner)
+```
+
+Ou seja:
+
+- `VACUUM` mantém armazenamento saudável
+- `ANALYZE` mantém decisões inteligentes
+
+Sem `ANALYZE` o PostgreSQL fica "cego" para otimização.
+
+#### Como você diagnostíca isso
+
+Você usa `EXPLAIN ANALYZE`.
+
+Ele compara:
+
+| estimado | real      |
+| -------- | --------- |
+| rows=5   | rows=1200 |
+
+Diferença grande → problema de estatística.
+
+Solução:
+
+```sql
+ ANALYZE orders
+```
+
+ou ajustar `autovacuum`.
+
+Fluxo real dentro do PostgreSQL:
+
+1. Dados mudam.
+2. Estatísticas ficam antigas.
+3. Planner estima errado.
+4. Plano errado é escolhido.
+5. Query fica lenta.
+6. `EXPLAIN ANALYZE` revela diferença.
+7. `ANALYZE` corrige.
 
 ### Índices do PostgreSQL
 
@@ -929,7 +1055,7 @@ Consulta:
 WHERE attributes @> '{"color": "red"}'
 ```
 
-Sem GIN -> full table scan.
+Sem GIN → full table scan.
 
 Também usado para:
 
@@ -981,7 +1107,7 @@ Cada `INSERT/UPDATE`:
 - gera WAL
 - aumenta checkpoint
 
-Índice demais -> write performance piora.
+Índice demais → write performance piora.
 
 #### O comportamento normal de um índice
 
@@ -1059,7 +1185,7 @@ Index Scan + Heap Fetch
 ```
 
 Ou seja:
-o banco volta a acessar a tabela -> perde performance.
+o banco volta a acessar a tabela → perde performance.
 
 Por isso existe um fenômeno real:
 
@@ -1155,9 +1281,9 @@ B-Tree é ordenada.
 Fisicamente fica:
 
 ```
-user_id 1 -> todas as datas
-user_id 2 -> todas as datas
-user_id 3 -> todas as datas
+user_id 1 → todas as datas
+user_id 2 → todas as datas
+user_id 3 → todas as datas
 ```
 
 Então funciona bem:
@@ -1226,8 +1352,8 @@ Ou seja:
 - faz heap fetch
 - joga fora tudo
 
-Página 1 -> rápida
-Página 5000 -> extremamente lenta
+Página 1 → rápida
+Página 5000 → extremamente lenta
 
 E piora:
 cada usuário acessando páginas altas repete esse custo.
@@ -1294,7 +1420,7 @@ PostgreSQL **não é thread-based como MySQL**.
 Ele funciona assim:
 
 ```
-1 conexão TCP -> 1 processo do PostgreSQL
+1 conexão TCP → 1 processo do PostgreSQL
 ```
 
 Se você tiver:
@@ -1421,7 +1547,7 @@ Agora:
 Ou seja:
 
 ```
-400 sessões lógicas -> 30 sessões físicas
+400 sessões lógicas → 30 sessões físicas
 ```
 
 O segredo:
@@ -1437,7 +1563,7 @@ Terminou a query:
 Isso funciona porque a maioria das APIs faz:
 
 ```
-query curta -> resposta -> acabou
+query curta → resposta → acabou
 ```
 
 Você não precisa de uma sessão dedicada permanente
@@ -1592,7 +1718,7 @@ Ele não sabe:
 - quantos serviços existem
 - quantos workers existem
 
-Cada instância cria o próprio pool -> o total explode.
+Cada instância cria o próprio pool → o total explode.
 
 ##### PgBouncer
 
@@ -1693,7 +1819,7 @@ COMMIT
 Durante esses 3 segundos:
 o banco inteiro fica impedido de limpar versões antigas.
 
-Com várias requisições -> degradação global.
+Com várias requisições → degradação global.
 
 ##### O pior cenário
 
@@ -1717,7 +1843,7 @@ Toda alteração no PostgreSQL primeiro vai para o WAL
 O primário faz:
 
 ```
-UPDATE -> grava WAL -> commit
+UPDATE → grava WAL → commit
 ```
 
 Na replicação:
@@ -1727,7 +1853,7 @@ o primário também **envia o WAL via rede** para outro servidor.
 O standby recebe:
 
 ```
-recebe WAL -> reexecuta alterações -> atualiza seus data files
+recebe WAL → reexecuta alterações → atualiza seus data files
 ```
 
 Ele não executa SQL da aplicação.
@@ -1762,7 +1888,7 @@ Muito usado em:
 #### O que ela resolve
 
 1. Alta disponibilidade
-   Se o primário cair -> promove standby (failover)
+   Se o primário cair → promove standby (failover)
 2. Escala leitura
    Você tira carga de SELECT pesado do primário
 
@@ -1800,7 +1926,7 @@ logo depois:
 GET /order
 ```
 
-Se o GET bater na replica -> pode não encontrar.
+Se o GET bater na replica → pode não encontrar.
 
 Isso chama:
 
@@ -1815,7 +1941,7 @@ Aplicações precisam lidar com isso.
 Arquitetura:
 
 ```
-Primary -> envia WAL -> Standby
+Primary → envia WAL → Standby
 ```
 
 Se o primary morre:
@@ -1851,7 +1977,7 @@ Se o primary cair entre:
 O standby nunca recebeu aquela transação.
 
 Se promovido:
--> você perdeu dados confirmados ao cliente.
+→ você perdeu dados confirmados ao cliente.
 
 Isso é chamado:
 
@@ -1948,7 +2074,7 @@ O PostgreSQL:
 - lê a tabela inteira
 - mantém lock de escrita
 
-Em tabela grande -> minutos de bloqueio.
+Em tabela grande → minutos de bloqueio.
 
 #### Forma correta
 
@@ -2045,13 +2171,13 @@ Mas com PgBouncer em _transaction pooling_:
 request A:
 
 ```
-usa conexão 3 -> prepara statement
+usa conexão 3 → prepara statement
 ```
 
 request B:
 
 ```
-vai para conexão 7 -> statement não existe
+vai para conexão 7 → statement não existe
 ```
 
 Erro clássico:
@@ -2063,10 +2189,10 @@ prepared statement "S_1" does not exist
 Ou pior, plano cacheado para um valor raro.
 
 Exemplo:
-`user_id = 1` -> 500k linhas
-`user_id = 9999` -> 2 linhas
+`user_id = 1` → 500k linhas
+`user_id = 9999` → 2 linhas
 
-O planner escolhe plano baseado no primeiro uso e reutiliza para todos -> query fica lenta.
+O planner escolhe plano baseado no primeiro uso e reutiliza para todos → query fica lenta.
 
 Isso se chama **parameter sniffing / generic plan problem**.
 
@@ -2359,3 +2485,429 @@ Mas é excelente para:
 - webhooks
 - retry jobs
 - processamento interno
+
+### O que é `pg_stat_activity` e `pg_stat_statements` e qual sua importância?
+
+Quando alguém diz:
+
+> "o banco está lento"
+
+Existem duas perguntas diferentes:
+
+1. O que está acontecendo **agora**?
+2. Qual query está custando mais ao longo do tempo?
+
+São ferramentas diferentes.
+
+#### :one: pg_stat_activity (tempo real)
+
+```sql
+SELECT * FROM pg_stat_activity;
+```
+
+Você vê:
+
+- pid
+- state
+- query
+- query_start
+- wait_event
+- xact_start
+
+Exemplo útil:
+
+```sql
+SELECT pid, state, now() - query_start AS duration, query
+FROM pg_stat_activity
+WHERE state = 'active';
+```
+
+Isso revela:
+
+- queries rodando há 5 minutos
+- transações abertas
+- bloqueios
+
+Você também pode identificar:
+
+```
+idle in transaction
+```
+
+Isso é perigoso:
+→ transação aberta segurando snapshot → impedindo VACUUM.
+
+#### :two: pg_stat_statements (histórico agregado)
+
+Precisa estar habilitado (`shared_preload_libraries`).
+
+Consulta típica:
+
+```sql
+SELECT query, calls, total_exec_time, mean_exec_time
+FROM pg_stat_statements
+ORDER BY total_exec_time DESC
+LIMIT 10;
+```
+
+Isso mostra:
+
+- quais queries mais consumiram tempo total
+- não apenas lentas, mas frequentes
+
+Exemplo real:
+
+| query             | calls | mean_exec_time |
+| ----------------- | ----- | -------------- |
+| SELECT user by id | 500k  | 1ms            |
+| SELECT order list | 2k    | 400ms          |
+
+Talvez a primeira seja mais problemática por volume
+
+#### Como usar juntos em incidente real
+
+Produção lenta.
+
+##### Passo 1
+
+Ver se há bloqueio
+
+```sql
+SELECT * FROM pg_stat_activity WHERE wait_event IS NOT NULL;
+```
+
+##### Passo 2
+
+Ver long transactions:
+
+```sql
+SELECT pid, now() - xact_start
+FROM pg_stat_activity
+WHERE state = 'active';
+```
+
+##### Passo 3
+
+Ver queries mais custosas historicamente:
+
+```sql
+SELECT query, total_exec_time
+FROM pg_stat_statements
+ORDER BY total_exec_time DESC;
+```
+
+#### Diferença essencial
+
+| Ferramenta         | Serve para                   |
+| ------------------ | ---------------------------- |
+| pg_stat_activity   | diagnóstico imediato         |
+| pg_stat_statements | tuning e otimização continua |
+
+#### Impacto arquitetural
+
+Sem `pg_stat_statements`, você otimiza "no escuro".
+Sem `pg_stat_activity`, você não resolve indicentes ao vivo.
+
+### O que é PITR (Point-in-Time Recovery)?
+
+Lembra do WAL?
+
+Toda mudança no banco vai primeiro para o WAL:
+
+```
+INSERT / UPDATE / DELTE → WAL → data files
+```
+
+Ou seja, o WAL é literalmente um **registro cronológico de tudo que aconteceu no banco**.
+
+#### O problema do backup comum
+
+Você faz backup às 02:00.
+
+Às 15 alguém executa:
+
+```sql
+DELETE FROM users;
+```
+
+Agora você só tem:
+
+- backup de 02:00
+- dados destruídos às 15:00
+
+Restaurar o backup fará você perder **13 horas de dados legítimos**.
+
+#### O que o PITR faz
+
+Você também arquiva os WALs continuamente.
+
+Então você tem:
+
+```
+backup base → WAL 02:01 → WAL 02:02 → ... → WAL 14:59 → WAL 15:00
+```
+
+Agora o PostgreSQL pode:
+
+1. restaurar o backup das 02:00
+2. reexecutar (replay) todos os WALs
+3. **parar exatamente às 14:59:59**
+
+Ou seja, você volta o banco para antes do erro humano. Isso é literalmente viagem no tempo do banco.
+
+#### Como você escolhe o ponto
+
+Você pode parar por:
+
+- timestamp
+- transaction id
+- LSN (log sequence number)
+
+Exemplo conceitual:
+
+```
+recovery_target_time = '2026-03-01 14:59:59'
+```
+
+#### Por que isso é crítico em produção
+
+Incidentes reais:
+
+- `DELETE sem WHERE`
+- bug em código
+- migration errada
+- importação corrompida
+- ransomware
+
+Sem PITR:
+downtime + perda massiva de dados.
+
+Com PITR:
+recuperação cirúrgica.
+
+### Quando usar replicação física e quando usar replicação lógica
+
+Lembra do WAL?
+
+Ele registra **alterações de páginas do disco**, não queries SQL.
+
+Exemplo interno (conceitual):
+
+```
+página 812 → linha 4 mudou de X para Y
+```
+
+Isso é o que a replicação física envia.
+
+#### Replicação física (streaming replication)
+
+O primário envia WAL → standby reaplica.
+
+A réplica não entende negócio, só reproduz o armazenamento.
+
+Consequências:
+
+- estrutura idêntica
+- índices idênticos
+- mesmas tabelas
+- não pode alterar schema
+- não pode escrever
+
+É literalmente um "espelho vivo" do banco.
+
+Por isso serve para:
+
+- failover
+- leitura
+
+Mas não para integração.
+
+#### Replicação lógica
+
+Aqui o PostgreSQL decodifica o WAL.
+
+Ele transforma:
+
+```
+page change
+```
+
+em:
+
+```sql
+INSERT INTO orders ...
+UPDATE users ...
+DELETE FROM payments ...
+```
+
+Agora você pode:
+
+- escolher tabelas
+- enviar para outro PostgreSQL
+- enviar para Kafka
+- alimentar data warehouse
+
+Isso se chama **CDC (Change Data Capture)**
+
+#### Exemplo prático
+
+Você quer mandar pedidos para um sistema de BI sem impactar produção.
+
+Com replicação física teria cópia inteira do banco.
+
+Com lógica, replica só `orders`.
+
+#### Migração sem downtime (caso clássico)
+
+Você quer trocar:
+
+PostgreSQL antigo → novo cluster
+
+Você:
+
+1. cria novo banco
+2. ativa replicação lógica
+3. dados sincronizam continuamente
+4. troca aplicação
+
+Sem parar o sistema.
+
+#### Trade-offs
+
+| Física      | Lógica      |
+| ----------- | ----------- |
+| rápida      | mais pesada |
+| simples     | complexa    |
+| consistente | flexível    |
+| tudo        | seletiva    |
+| HA          | integração  |
+
+#### Conexão com WAL
+
+- física → replay do WAL
+- lógica → decodificação do WAL
+
+Mesma fonte, usos diferentes
+
+### Contenção de locks
+
+Imagine 500 requisições simultâneas fazendo:
+
+```sql
+UPDATE accounts SET balance = balance - 1 WHERE id = 1;
+```
+
+Cada transação:
+
+1. cria snapshot
+2. bloqueia a mesma linha (row lock)
+3. escreve no WAL
+4. faz commit (fsync)
+5. libera lock
+
+Mesmo sendo rápidas (2–3ms), elas formam fila de lock na mesma linha
+
+Não é deadlock.
+É serialização forçada.
+
+#### Contenção invisível (mais comum ainda)
+
+Mesmo que atualizem linhas diferentes:
+
+```sql
+UPDATE orders SET status = 'paid' WHERE id = $1;
+```
+
+Ainda competem por:
+
+#### 1️⃣ WAL flush
+
+Commit precisa garantir WAL persistido no disco.
+
+Se 500 commits simultâneos → todos esperam o disco.
+
+---
+
+#### 2️⃣ Index page contention
+
+Se muitos inserts usam o mesmo índice crescente:
+
+**inserções no final da B-Tree**
+
+Todos disputam a mesma página do índice.
+
+---
+
+#### 3️⃣ LWLocks (locks internos)
+
+PostgreSQL tem locks internos para:
+
+- buffer cache
+- freelist
+- WAL buffers
+- clog
+
+Esses não aparecem como row locks.
+
+Mas geram espera.
+
+---
+
+#### 4️⃣ Context switching
+
+500 conexões = 500 processos
+
+Mesmo com CPU sobrando:
+
+- scheduler troca contexto
+- cache de CPU invalida
+- overhead cresce
+
+Throughput começa a cair.
+
+---
+
+#### O fenômeno real
+
+Se você aumentar conexões:
+
+| Conexões | Throughput    |
+| -------- | ------------- |
+| 10       | cresce        |
+| 30       | cresce        |
+| 80       | ótimo         |
+| 150      | estabiliza    |
+| 300      | começa a cair |
+| 600      | degrada forte |
+
+Isso se chama **_contention collapse_**
+
+#### Por que isso acontece mesmo com transações curtas?
+
+Porque:
+
+- elas ainda fazem commit
+- commit exige WAL flush
+- flush é serializado
+- lock release ainda é sequencial
+- CPU ainda troca contexto
+
+Mesmo 2ms × 500 simultâneas → gargalo.
+
+#### Solução arquitetural
+
+- limitar pool
+- usar PgBouncer
+- batch writes
+- reduzir commits desnecessários
+- evitar hot rows
+- shardear se necessário
+
+#### Conclusão importante
+
+PostgreSQL escala melhor com:
+
+> poucas conexões bem utilizadas
+> do que muitas conexões concorrendo
+
+Concorrência excessiva reduz eficiência.
