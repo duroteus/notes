@@ -4,48 +4,57 @@ Conteúdo reorganizado para aprendizado incremental e fluxo linear, em ordem de 
 
 ## Sumário
 
-**Parte 1: Fundamentos**
+### Parte 1: Fundamentos
+
 1. ACID
 2. MVCC → Dead tuples → VACUUM → Wraparound
 3. WAL
 4. Checkpoints
 
-**Parte 2: Isolamento e Concorrência**
+### Parte 2: Isolamento e Concorrência
+
 5. Níveis de isolamento
 6. Tipos de locks (incluindo Advisory)
 7. Deadlock
 8. Contenção de locks e Hot Row Contention
 
-**Parte 3: Planner e Busca**
+### Parte 3: Planner e Busca
+
 9. Estatísticas e ANALYZE
 10. Sequential vs Index Scan
 11. Índices (B-Tree, Hash, GIN, GiST, BRIN, Partial, Composite, Index Only Scan)
 12. EXPLAIN ANALYZE e tipos de Join
 
-**Parte 4: Operações**
-13. Paginação OFFSET vs Keyset
-14. N+1, COUNT(*), Write amplification
+### Parte 4: Operações
 
-**Parte 5: Arquitetura**
+13. Paginação OFFSET vs Keyset
+14. N+1, COUNT(\*), Write amplification
+
+### Parte 5: Arquitetura
+
 15. Pool de conexões e PgBouncer
 16. Transações longas
 17. Prepared Statements
 
-**Parte 6: Alta Disponibilidade**
+### Parte 6: Alta Disponibilidade
+
 18. Réplicas e Replication Lag
 19. Failover
 20. PITR
 21. Replicação física vs lógica
 
-**Parte 7: Práticas**
+### Parte 7: Práticas
+
 22. Migrations
 23. Idempotência
 24. Fila e Starvation
 
-**Parte 8: Diagnóstico**
+### Parte 8: Diagnóstico
+
 25. pg_stat_activity e pg_stat_statements
 
-**Parte 9: Avançado**
+### Parte 9: Avançado
+
 26. Cache (Redis) x PostgreSQL
 27. Alta concorrência e race condition
 28. Transação longa e pico no COMMIT
@@ -67,7 +76,7 @@ UPDATE accounts SET balance = balance + 100 WHERE id = 2;
 COMMIT;
 ```
 
-Se cair entre as duas instruções
+Se cair entre as duas instruções:
 
 - WAL permite rollback automático
 - ou replay consistente no recovery
@@ -236,8 +245,8 @@ UPDATE users SET name = 'Ana Maria' WHERE id = 1;
 
 O PostgreSQL:
 
-**1.** cria nova versão da linha
-**2.** marca a antiga com `xmax = tx_id`
+1. cria nova versão da linha
+2. marca a antiga com `xmax = tx_id`
 
 Enquanto houver uma transação ativa que começou antes do commit, aquela versão antiga ainda pode ser visível.
 
@@ -275,10 +284,10 @@ Elas continuam dentro do arquivo físico da tabela (`heap file`).
 
 O VACUUM:
 
-**1.** varre página por página do heap
-**2.** verifica visibility (usando xmin/xmax)
-**3.** confirma que nenhuma transação precisa mais daquela versão
-**4.** marca o espaço como reutilizável (free space map)
+1. varre página por página do heap
+2. verifica visibility (usando xmin/xmax)
+3. confirma que nenhuma transação precisa mais daquela versão
+4. marca o espaço como reutilizável (free space map)
 
 Importante:
 
@@ -442,8 +451,8 @@ UPDATE orders SET status = 'paid' WHERE id = 10;
 
 O PostgreSQL:
 
-**1.** escreve no WAL
-**2.** altera a página na **RAM** (shared_buffers)
+1. escreve no WAL
+2. altera a página na RAM (shared_buffers)
 
 Ele **não grava imediatamente na tabela física**.
 
@@ -504,10 +513,11 @@ Sem checkpoint:
 #### Os níveis no PostgreSQL
 
 O padrão SQL define:
-**1.** READ UNCOMMITTED
-**2.** READ COMMITTED
-**3.** REPEATABLE READ
-**4.** SERIALIZABLE
+
+1. READ UNCOMMITTED
+2. READ COMMITTED
+3. REPEATABLE READ
+4. SERIALIZABLE
 
 O PostgreSQL na prática oferece **3 comportamentos reais:**
 
@@ -743,6 +753,11 @@ Muito usado com Node.js + múltiplas instâncias.
 
 Não substitui constraint.
 Sempre combine com:
+<<<<<<< HEAD
+=======
+
+> > > > > > > bac2437 (adds organized version of `PostgresClass`)
+
 - unique index
 - idempotência
 
@@ -863,43 +878,13 @@ UPDATE orders SET status = 'paid' WHERE id = $1;
 
 Ainda competem por:
 
-**1. WAL flush**
+1. **WAL flush** — Commit precisa garantir WAL persistido no disco. Se 500 commits simultâneos → todos esperam o disco.
 
-Commit precisa garantir WAL persistido no disco.
+2. **Index page contention** — Se muitos inserts usam o mesmo índice crescente (inserções no final da B-Tree), todos disputam a mesma página do índice.
 
-Se 500 commits simultâneos → todos esperam o disco.
+3. **LWLocks (locks internos)** — PostgreSQL tem locks internos para: buffer cache, freelist, WAL buffers, clog. Esses não aparecem como row locks, mas geram espera.
 
-**2. Index page contention**
-
-Se muitos inserts usam o mesmo índice crescente:
-
-**inserções no final da B-Tree**
-
-Todos disputam a mesma página do índice.
-
-**3. LWLocks (locks internos)**
-
-PostgreSQL tem locks internos para:
-
-- buffer cache
-- freelist
-- WAL buffers
-- clog
-
-Esses não aparecem como row locks.
-Mas geram espera.
-
-**4. Context switching**
-
-500 conexões = 500 processos
-
-Mesmo com CPU sobrando:
-
-- scheduler troca contexto
-- cache de CPU invalida
-- overhead cresce
-
-Throughput começa a cair.
+4. **Context switching** — 500 conexões = 500 processos. Mesmo com CPU sobrando: scheduler troca contexto, cache de CPU invalida, overhead cresce. Throughput começa a cair.
 
 #### O fenômeno real
 
@@ -1003,9 +988,7 @@ Não tem como duas versões modificarem o mesmo registro simultaneamente.
 
 **Soluções reais**
 
-**:x: ERRADO (modelo ingênuo)**
-
-contador central:
+**Errado (modelo ingênuo):** contador central
 
 ```
 likes = likes + 1
@@ -1013,7 +996,7 @@ saldo = saldo - 1
 estoque = estoque - 1
 ```
 
-**:heavy_check_mark: SOLUÇÃO 1 — tabela de eventos**
+**Solução 1 — Tabela de eventos**
 
 Ao invés de atualizar:
 
@@ -1027,10 +1010,9 @@ Depois agrega:
 SELECT SUM(delta) FROM stock_movements WHERE product_id = 10;
 ```
 
-Agora:
-cada compra escreve em linha diferente → paralelizável
+Agora: cada compra escreve em linha diferente → paralelizável.
 
-**:heavy_check_mark: SOLUÇÃO 2 — sharding lógico**
+**Solução 2 — Sharding lógico**
 
 Em vez de 1 contador:
 
@@ -1041,19 +1023,18 @@ counter_3
 counter_4
 ```
 
-Cada request usa um shard aleatório
-Depois soma
+Cada request usa um shard aleatório. Depois soma.
 
-**:heavy_check_mark: SOLUÇÃO 3 — fila**
+**Solução 3 — Fila**
 
 - grava pedido
 - worker sequencial desconta estoque
 
-Remove concorrência
+Remove concorrência.
 
-**:heavy_check_mark: SOLUÇÃO 4 — cache**
+**Solução 4 — Cache**
 
-Redis INCR/DECR para contadores de alta frequência
+Redis INCR/DECR para contadores de alta frequência.
 
 **Conclusão importante**
 
@@ -1073,7 +1054,7 @@ Concorrência excessiva reduz eficiência.
 
 ---
 
-## Parte 3: Planner e Busca de Dados
+## Parte 3: Planner e Busca
 
 ### 9. Estatísticas e ANALYZE
 
@@ -1117,9 +1098,7 @@ Ele faz amostragem e tenta responder:
 
 Ele coleta:
 
-**:one: MCV — Most Common Values**
-
-Valores mais frequentes.
+1. **MCV (Most Common Values)** — Valores mais frequentes.
 
 | valor     | frequencia |
 | --------- | ---------- |
@@ -1127,23 +1106,11 @@ Valores mais frequentes.
 | pending   | 7%         |
 | cancelled | 1%         |
 
-**:two: Histogram**
-
-Distribuição dos demais valores (usado para ranges)
-
-Exemplo: `created_at > '2025-01-01'`
-
-**:three: ndistinct**
-
-Qualidade estimada de valores únicos.
-
-Importante para saber se índice vale a pena.
+2. **Histogram** — Distribuição dos demais valores (usado para ranges). Exemplo: `created_at > '2025-01-01'`
 
 **:four: null_frac**
 
-Percentual de NULLs
-
-Afeta seletividade de filtros.
+4. **null_frac** — Percentual de NULLs. Afeta seletividade de filtros.
 
 #### O que o planner realmente quer saber
 
@@ -1213,12 +1180,11 @@ SELECT * FROM users WHERE email = 'ana@email.com';
 
 O banco:
 
-**1.** consulta a B-tree
-**2.** encontra ponteiro da linha
-**3.** vai até o heap buscar a tupla
+1. consulta a B-tree
+2. encontra ponteiro da linha
+3. vai até o heap buscar a tupla
 
-Problema:
-isso gera **acesso aleatório ao disco.**
+Problema: isso gera acesso aleatório ao disco.
 
 #### Por que às vezes o índice piora
 
@@ -1286,7 +1252,7 @@ Ou seja, **o PostgreSQL não escolhe índice por existir índice. Ele escolhe pe
 
 ### 11. Índices do PostgreSQL
 
-**:one: B-Tree (90% dos casos)**
+#### 1. B-Tree (90% dos casos)
 
 ```sql
 CREATE INDEX idx_users_email ON users(email);
@@ -1309,7 +1275,7 @@ Use para:
 - datas
 - buscas exatas
 
-**:two: Hash**
+#### 2. Hash
 
 ```sql
 CREATE INDEX idx_users_email_hash ON users USING HASH(email)
@@ -1324,7 +1290,7 @@ WHERE email = ?
 Não serve para range nem ordenação.
 Na prática quase nunca compensa usar em vez de B-Tree.
 
-**:three: GIN (muito importante em APIs modernas)**
+#### 3. GIN (muito importante em APIs modernas)
 
 Exemplo JSONB:
 
@@ -1346,7 +1312,7 @@ Também usado para:
 - arrays
 - busca textual (`to_tsvector`)
 
-**:four: GiST**
+#### 4. GiST
 
 Usado quando você não quer igualdade, mas **proximidade**.
 
@@ -1359,7 +1325,7 @@ Exemplo:
 Comum em PostGIS
 "restaurantes perto de mim".
 
-**:five: BRIN (muito subestimado)**
+#### 5. BRIN (muito subestimado)
 
 Para tabela enorme:
 
@@ -1392,9 +1358,9 @@ SELECT email FROM users WHERE email = 'ana@email.com';
 
 O PostgreSQL:
 
-**1.** consulta a B-Tree
-**2.** encontra o ponteiro (TID)
-**3.** vai até a tabela (heap) buscar a linha
+1. consulta a B-Tree
+2. encontra o ponteiro (TID)
+3. vai até a tabela (heap) buscar a linha
 
 Ou seja:
 
@@ -1680,7 +1646,7 @@ JOIN users u ON u.id = o.user_id;
 
 O PostgreSQL tem 3 maneiras principais de resolver isso.
 
-**:one: Nested Loop Join**
+#### 1. Nested Loop Join
 
 Algoritmo:
 
@@ -1715,7 +1681,7 @@ Isso é o clássico:
 
 **nested loop explosion**
 
-**:two: Hash Join**
+#### 2. Hash Join
 
 O banco faz:
 
@@ -1735,7 +1701,7 @@ Custo:
 - usa RAM (work_mem)
 - pode fazer spill para disco se grande demais
 
-**:three: Merge Join**
+#### 3. Merge Join
 
 Funciona como dois ponteiros:
 
@@ -1841,7 +1807,7 @@ Nenhum descarte de linhas.
 
 ---
 
-### 14. N+1 queries, COUNT(*) e Write amplification
+### 14. N+1 queries, COUNT(\*) e Write amplification
 
 #### O problema de N+1 queries
 
@@ -1900,7 +1866,7 @@ WHERE user_id IN (1,2,3,4,...);
 
 Uma query mais pesada é melhor do que centenas pequenas.
 
-#### SELECT COUNT(*) FROM tabela_grande
+#### SELECT COUNT(\*) FROM tabela_grande
 
 A pergunta real é:
 
@@ -2590,8 +2556,8 @@ Worker A continua esperando. Pode repetir indefinidamente.
 | Deadlock            | Starvation                |
 | ------------------- | ------------------------- |
 | ciclo de espera     | espera infinita sem ciclo |
-| PostgreSQL detecta | PostgreSQL não detecta    |
-| rollback automático| não há rollback           |
+| PostgreSQL detecta  | PostgreSQL não detecta    |
+| rollback automático | não há rollback           |
 
 ---
 
