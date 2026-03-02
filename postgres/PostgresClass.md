@@ -28,6 +28,7 @@
 ---
 
 <a id="mvcc-o-que-realmente-acontece-dentro-do-postgresql"></a>
+
 ### MVCC — o que realmente acontece dentro do PostgreSQL
 
 Imagine uma tabela `users`:
@@ -117,6 +118,7 @@ Esse lixo são linhas que:
 - mas ainda estão ocupando espaço físico
 
 <a id="a-consequencia-do-mvcc-dead-tuples"></a>
+
 ### A consequência do MVCC — Dead tuples
 
 Quando ocorre:
@@ -160,6 +162,7 @@ Isso é um problema clássico em produção com:
 - carga alta de UPDATE/DELETE
 
 <a id="e-agora-vacuum"></a>
+
 ### E agora? VACUUM!
 
 #### O que o VACUUM realmente faz
@@ -323,6 +326,7 @@ geralmente não é CPU nem query.
 Por isso SSD/NVMe impacta muito PostgreSQL.
 
 <a id="e-o-que-sao-os-checkpoints"></a>
+
 ### E o que são os checkpoints?
 
 Quando você executa:
@@ -387,6 +391,7 @@ Sem checkpoint:
 - recovery ficaria gigantesco
 
 <a id="o-que-significa-o-acronimo-acid"></a>
+
 ### O que significa o acrônimo ACID?
 
 #### A — Atomicidade
@@ -468,6 +473,7 @@ Se houver crash:
 - banco volta ao último commit confirmado
 
 <a id="e-quais-sao-os-niveis-de-isolamento-no-postgresql"></a>
+
 ### E quais são os niveis de isolamento no PostgreSQL?
 
 #### Os níveis no PostgreSQL
@@ -556,6 +562,7 @@ APIs financeiras geralmente usam:
 `SERIALIZIBLE` ou locking explicito.
 
 <a id="o-que-e-deadlock-e-o-que-fazer-para-previnir"></a>
+
 ### O que é deadlock e o que fazer para previnir?
 
 #### Exemplo real
@@ -625,6 +632,7 @@ Se você não tratar retry
 - operação falha mesmo sendo válida
 
 <a id="e-quais-sao-os-tipos-de-locks"></a>
+
 ### E quais são os tipos de locks?
 
 :one: **Row-Level Locks (mais comuns)**
@@ -714,6 +722,7 @@ Se transações forem longas → lock rentention alto.
 Se houver DDL em horário errado → freeze da aplicação.
 
 <a id="e-como-o-postgresql-busca-os-dados-nas-tabelas"></a>
+
 ### E como o PostgreSQL busca os dados nas tabelas?
 
 O PostgreSQL tem um componente crítico:
@@ -814,6 +823,7 @@ Sintomas clássico:
 > query ficou lenta sem mudar código.
 
 <a id="como-o-postgresql-decide-executar-uma-query"></a>
+
 ### Como o PostgreSQL decide executar uma query
 
 Toda vez que você roda:
@@ -1041,6 +1051,7 @@ Fluxo real dentro do PostgreSQL:
 7. `ANALYZE` corrige.
 
 <a id="indices-do-postgresql"></a>
+
 ### Índices do PostgreSQL
 
 :one: **B-Tree (90% dos casos)**
@@ -1365,6 +1376,7 @@ E normalmente o dev diz:
 > "mas eu já criei índice..."
 
 <a id="paginacao-offset-x-keyset"></a>
+
 ### Paginação: OFFSET x Keyset
 
 #### OFFSET pagination
@@ -1453,6 +1465,7 @@ Sintoma típico:
 > endpoint de listagem derruba o sistema em horário de pico.
 
 <a id="pool-de-conexoes"></a>
+
 ### Pool de conexões
 
 Aqui está a parte crítica:
@@ -1778,6 +1791,7 @@ Isso estabeliza:
 - locks
 
 <a id="o-problema-de-transacoes-longas"></a>
+
 ### O problema de transações longas
 
 Lembre do MVCC:
@@ -1878,6 +1892,7 @@ Ou seja:
 uma única conexão esquecida pode degradar todo o banco.
 
 <a id="replicas"></a>
+
 ### Replicas
 
 Lembra do WAL?
@@ -1979,6 +1994,7 @@ Isso chama:
 Aplicações precisam lidar com isso.
 
 <a id="failover"></a>
+
 ### Failover
 
 #### O cenário
@@ -2072,6 +2088,7 @@ Senão a aplicação continua tentando conectar no primary morto.
 Sempre há trade-off entre **durabilidade vs latência**
 
 <a id="migrations"></a>
+
 ### Migrations
 
 #### O que derruba a aplicação
@@ -2166,6 +2183,7 @@ Compatibilidade dupla temporária
 A maioria dos incidentes de banco em produção não é query lenta é **migration bloqueante**.
 
 <a id="prepared-statements"></a>
+
 ### Prepared Statements
 
 Quando você executa normalmente:
@@ -2262,6 +2280,7 @@ Soluções comuns:
 - `prepareThreshold` tuning
 
 <a id="o-problema-de-n1-queries"></a>
+
 ### O problema de N+1 queries
 
 Você faz:
@@ -2356,6 +2375,7 @@ Sintomas clássicos:
 O problema é **multiplicação concorrente**, não custo unitário.
 
 <a id="idempotencia-no-postgresql"></a>
+
 ### Idempotência no PostgreSQL
 
 ---
@@ -2441,6 +2461,7 @@ sob concorrência alta você pode ter:
 - inconsistência
 
 <a id="fila-usando-postgresql"></a>
+
 ### Fila usando PostgreSQL
 
 Tabela:
@@ -2537,6 +2558,7 @@ Mas é excelente para:
 - processamento interno
 
 <a id="o-que-e-pg_stat_activity-e-pg_stat_statements-e-qual-sua-importancia"></a>
+
 ### O que é `pg_stat_activity` e `pg_stat_statements` e qual sua importância?
 
 Quando alguém diz:
@@ -2660,6 +2682,7 @@ Sem `pg_stat_statements`, você otimiza "no escuro".
 Sem `pg_stat_activity`, você não resolve indicentes ao vivo.
 
 <a id="o-que-e-pitr-point-in-time-recovery"></a>
+
 ### O que é PITR (Point-in-Time Recovery)?
 
 Lembra do WAL?
@@ -2738,6 +2761,7 @@ Com PITR:
 recuperação cirúrgica.
 
 <a id="quando-usar-replicacao-fisica-e-quando-usar-replicacao-logica"></a>
+
 ### Quando usar replicação física e quando usar replicação lógica
 
 Lembra do WAL?
@@ -2843,6 +2867,7 @@ Sem parar o sistema.
 Mesma fonte, usos diferentes
 
 <a id="contencao-de-locks"></a>
+
 ### Contenção de locks
 
 Imagine 500 requisições simultâneas fazendo:
@@ -2965,3 +2990,1381 @@ PostgreSQL escala melhor com:
 > do que muitas conexões concorrendo
 
 Concorrência excessiva reduz eficiência.
+
+### O que é Hot Row Contention?
+
+Imagine uma tabela:
+
+```
+inventory
+(product_id, stock)
+```
+
+API de compra:
+
+```sql
+UPDATE inventory
+SET stock = stock - 1
+WHERE product_id = 10;
+```
+
+Agora ocorre uma promoção
+
+500 usuários clicam em **comprar** ao mesmo tempo.
+
+#### O que acontece dentro do PostgreSQL
+
+Primeira transação
+
+- pega row lock na linha `product_id = 10`
+
+As outras 499:
+
+- não podem atualizar
+- ficam esperando
+
+Elas não falham.
+Elas entram em **fila de lock**.
+
+Resultado:
+
+| tempo  | efeito            |
+| ------ | ----------------- |
+| início | rápido            |
+| pico   | latência cresce   |
+| depois | pool esgota       |
+| final  | API lenta/timeout |
+
+O banco não está lento por CPU
+Está lento por **serialização forçada**.
+
+#### Como identificar
+
+Rodando:
+
+```sql
+SELECT pid, wait_event_type, wait_event, query
+FROM pg_stat_activity
+WHERE wait_event IS NOT NULL;
+```
+
+Você verá várias sessões esperando e a mesma query:
+
+```sql
+UPDATE inventory SET stock = stock - 1 WHERE product_id = $1
+```
+
+Isso é assinatura clássica de hot row.
+
+#### Por que MVCC não resolve
+
+MVCC permite:
+
+SELECT não bloquear UPDATE.
+
+Mas UPDATE x UPDATE na mesma linha
+→ precisa serializar.
+
+Não tem como duas versões modificarem o mesmo registro simultaneamente.
+
+#### Soluções reais
+
+##### :x: ERRADO (modelo ingênuo)
+
+contador central:
+
+```
+likes = likes + 1
+saldo = saldo - 1
+estoque = estoque - 1
+```
+
+---
+
+##### :heavy_check_mark: SOLUÇÃO 1 — tabela de eventos
+
+Ao invés de atualizar:
+
+```sql
+INSERT INTO stock_movements(product_id, delta) VALUES (10, -1);
+```
+
+Depois agrega:
+
+```sql
+SELECT SUM(delta) FROM stock_movements WHERE product_id = 10;
+```
+
+Agora:
+cada compra escreve em linha diferente → paralelizável
+
+---
+
+##### :heavy_check_mark: SOLUÇÃO 2 — sharding lógico
+
+Em vez de 1 contador:
+
+```
+counter_1
+counter_2
+counter_3
+counter_4
+```
+
+Cada request usa um shard aleatório
+Depois soma
+
+---
+
+##### :heavy_check_mark: SOLUÇÃO 3 — fila
+
+- grava pedido
+- worker sequencial desconta estoque
+
+Remove concorrência
+
+---
+
+##### :heavy_check_mark: SOLUÇÃO 4 — cache
+
+Redis INCR/DECR para contadores de alta frequência
+
+---
+
+#### Conclusão importante
+
+Hot row contention é um problema **de modelagem de dados**, não de índice nem hardware
+
+Você não resolve aumentando CPU.
+Você resolve **mudando o padrão de escrita**.
+
+### O que é starvation?
+
+Vamos usar a fila de jobs:
+
+```sql
+SELECT *
+FROM jobs
+WHERE status = 'pending'
+LIMIT 1
+FOR UPDATE;
+```
+
+Você tem 10 workers.
+
+#### O que você espera
+
+Cada worker pega um job diferente.
+
+#### O que pode acontecer
+
+O banco não garante **justiça de agendamento**
+
+Cenário:
+
+1. Worker A tenta lockar linha 1
+2. Worker B chega logo depois → consegue linha 2
+3. WOrker C chega → linha 3
+4. Worker D → linha 4
+
+Worker A ficou esperando.
+
+Mas antes do lock liberar:
+novos workers chegam e pegam novas linhas livres.
+
+Worker A continua esperando.
+
+Isso pode repetir indefinidamente.
+
+Ele não trava o sistema.
+Ele simplesmente **nunca progride**.
+
+Isso é starvation.
+
+#### Diferença para deadlock
+
+| Deadlock            | Starvation                |
+| ------------------- | ------------------------- |
+| ciclo de espera     | espera infinita sem ciclo |
+| PostgreSQL detecta  | PostgreSQL não detecta    |
+| erro retornado      | só lentidão               |
+| rollback automático | não há rollback           |
+
+#### Caso clássico em produção
+
+Fila de pagamentos:
+
+- workers rápidos pegam sempre os primeiros jobs
+- um job específico fica sempre bloqueado
+- sistema parece saudável
+- mas certos pedidos nunca processam
+
+Isso acontece sem erro no banco.
+
+#### Onde aparece muito
+
+- filas em banco
+- controle de estoque
+- `FOR UPDATE` concorrente
+- sistemas com muitos retries agressivos
+
+#### Solução principal
+
+Use
+
+```sql
+FOR UPDATE SKIP LOCKED
+```
+
+Agora o worker não espera.
+Ele pula linhas bloqueadas.
+
+Resultado:
+
+- ninguém fica preso
+- todos progridem
+
+#### Outra causa comúm
+
+Transações longas + muitas curtas:
+
+- curtas pegam lock rapidamente
+- longa sempre perde a corrida
+- nunca executa
+
+Também é starvation
+
+### Read replica
+
+Fluxo típico em arquitetura:
+
+```
+POST /users → primary
+GET /users → replica
+```
+
+Agora veja a sequência real.
+
+---
+
+#### Passo 1 — escrita
+
+```sql
+INSERT INTO users (email) VALUES ('ana@email.com');
+COMMIT;
+```
+
+O PostgreSQL responde:
+
+> sucesso
+
+Porque o WAL foi persistido no **primário**
+
+Mas a réplica ainda precisa:
+
+1. receber WAL pela rede
+2. aplicar replay
+3. atualizar páginas
+
+Isso leva milissegundos... às vezes segundos.
+
+Isso é o **replication lag**.
+
+---
+
+#### Passo 2 — leitura imediata
+
+Logo depois o frontend chama:
+
+```sql
+SELECT * FROM users WHERE email='ana@email.com';
+```
+
+Mas essa query vai para a réplica.
+
+Resultado:
+
+```
+0 rows
+```
+
+Para a aplicação:
+
+> o usuário não existe
+
+Você criou um bug funcional.
+
+---
+
+#### Casos reais comuns
+
+##### Login após cadastro
+
+- usuário cria conta
+- redireciona para login
+- login falha
+
+##### Checkout
+
+- pedido criado
+- página de confirmação consulta pedido
+- pedido "não encontrado"
+
+##### APIs REST
+
+Sequência:
+
+```
+POST /orders
+GET /orders/{id}
+```
+
+GET falha intermitentemente
+
+Muito difícil de reproduzir localmente
+
+#### Por que é traiçoeiro
+
+- banco está saudável
+- queries estão corretas
+- não há erro SQL
+- logs não mostram problema
+
+É arquitetura.
+
+---
+
+#### Soluções
+
+#### :one: Ready-your-writes (mais comum)
+
+Após escrever, ler do primário por alguns segundos.
+
+Exemplo:
+
+- mesma request usa primary
+- ou cookie de sessão direciona
+
+---
+
+#### :two: Sticky session
+
+Usuário que escreveu continua lendo do primário temporariamente.
+
+---
+
+#### :three Checar lag
+
+Alguns drivers verificam LSN aplicado antes de ler.
+
+---
+
+#### :four: Não usar réplica para dados críticos
+
+- autenticação
+- pagamentos
+- criação imediata de recurso
+
+Use réplica para:
+
+- dashboards
+- relatórios
+- listagens
+
+---
+
+#### Conclusão
+
+Read replica melhora escalabilidade, mas troca consistência imediata por desempenho.
+
+Se a aplicação não considerar isso, surgem bugs funcionais.
+
+#### Cache (Redis) x PostgreSQL
+
+Muitos devs tentam resolver tudo com:
+
+- índice
+- `EXPLAIN ANALYZE`
+- tuning
+
+Mas às vezes o banco não está lento.
+Ele está **sobrecarregado de leituras repetidas**.
+
+Exemplo real:
+
+Endpoint:
+
+```
+GET /product/10
+```
+
+Cada acesso executa:
+
+```sql
+SELECT * FROM products WHERE id = 10;
+```
+
+Se 20.000 usuários abrirem a página:
+
+→ 20.000 queries idênticas.
+
+O PostgreSQL consegue, mas:
+
+- ocupa conexões
+- consome CPU
+- disputa cache
+- atrapalha outras operações
+
+Isso é problema de arquitetura, não de SQL.
+
+#### Onde o cache entra
+
+Você guarda o resultado:
+
+```
+key: product:10
+value: JSON do produto
+```
+
+Fluxo:
+
+1. aplicação consulta Redis
+2. se existir → retorna
+3. se não → consulta banco e popula cache
+
+Isso chama:
+**cache-aside pattern**
+
+Agora:
+
+20.000 acessos → 1 query real no banco.
+
+#### Quando usar cache
+
+Ideal para:
+
+- catálogo de produtos
+- perfis
+- configurações
+- rankings
+- contadores de leitura
+- páginas públicas
+
+Não ideal para:
+
+- saldo bancário
+- estoque crítico
+- autenticação imediata
+
+#### O problema perigoso (muito comum)
+
+Você atualiza o banco:
+
+```sql
+UPDATE products SET price = 100 WHERE id = 10;
+```
+
+Mas esquece de invalidar o cache.
+
+O Redis ainda tem:
+
+```
+price = 120
+```
+
+Agora:
+
+- banco está correto
+- aplicação mostra dado antigo
+
+Isso é:
+
+> **cache incoerente (stale read)**
+
+E é pior que banco lento, porque:
+
+- não gera erro
+- gera comportamento incorreto
+
+#### Estratégia de invalidação
+
+#### :one: TTL
+
+Cache expira automaticamente (ex.: 60s).
+Simples, porém inconsistente temporariamente.
+
+#### :two: Invalidação ativa
+
+Após UPDATE:
+
+```
+DEL product:10
+```
+
+Mais correto, mais complexo.
+
+#### :three: Write-through
+
+Escreve no banco e no cache juntos.
+
+#### Regra importante
+
+PostgreSQL → fonte da verdade
+
+Cache → cópia descartável
+
+Nunca confiar no cache para consistência.
+
+### `SELECT COUNT(*) FROM tabela_grande`, qual o problema?
+
+A pergunta real é:
+
+> Por que o banco não guarda "quantidade de linhas" pronta?
+
+Muitos bancos fazem isso.
+O PostgreSQL não pode.
+
+Por causa do **MVCC**
+
+#### O problema
+
+Lembre:
+
+várias versões da mesma linha podem existir.
+
+Situação
+
+| id  | status             |
+| --- | ------------------ |
+| 1   | antiga (invisível) |
+| 1   | nova (visível)     |
+
+Uma transação antiga pode enxergar a antiga.
+Outra pode enxergar a nova.
+
+Então:
+
+**o número de linhas depende da transação que pergunta**
+
+Logo:
+
+O banco não tem um único valor correto de contagem.
+
+#### Por isso o COUNT precisa verificar
+
+Para cada linha ele precicsa checar:
+
+```
+xmin / xmax → visivel neste snapshot?
+```
+
+Esse teste só existe no **heap**, não no índice.
+
+Então mesmo com índice:
+
+```sql
+SELECT COUNT(*) FROM orders;
+```
+
+o PostgreSQL geralmente faz:
+
+```
+Seq Scan
+```
+
+E isso é O(n).
+
+Tabela com 50 milhões de linhas → leitura massiva.
+
+#### "Mas as vezes é rápido"
+
+Pode ser rápido quando:
+
+- tabela está no cache
+- visibility map está completo
+- index-only scan possível
+
+Mas não é garantido
+
+#### O que sistemas reais fazem
+
+Eles não contam em tempo real.
+
+#### Estratégia 1 — contador materializado
+
+Tabela:
+
+```
+stats (orders_count)
+```
+
+Ao inserir pedido:
+
+```sql
+UPDATE stats SET orders_count = orders_count + 1;
+```
+
+---
+
+#### Estratégia 2 — cache
+
+Guardar no redis:
+
+```
+orders:count = 15420321
+```
+
+---
+
+#### Estratégia 3 — estimativa
+
+```sql
+SELECT reltuples FROM pg_class WHERE relname='orders';
+```
+
+Rápido, mas aproximado.
+
+Muito usado em paginação:
+
+> "aprox. 15 milhões de registros"
+
+---
+
+#### Conclusão
+
+`COUNT(*)` é lento não por falta de índice.
+
+É lento porque o PostgreSQL precisa respeitar consistência transacional do MVCC.
+
+### Nested Loop Join, Hash Join, Merge Join
+
+Considere:
+
+```sql
+SELECT *
+FROM orders o
+JOIN users u ON u.id = o.user_id;
+```
+
+O PostgreSQL tem 3 maneiras principais de resolver isso.
+
+#### :one: Nested Loop Join
+
+Algoritmo:
+
+```
+para cada linha de orders
+   procurar o user correspondente
+```
+
+Funciona assim internamente:
+
+```
+orders: 10 linhas
+→ faz 10 buscas em users
+```
+
+Se `users.id` tem índice:
+cada busca é rápida.
+
+Quando é ótimo
+
+- tabela externa pequena
+- lookup por chave primária
+- consultas por ID
+
+Exemplo típico de API:
+
+```sql
+SELECT * FROM orders WHERE id = 10;
+JOIN users ON ...
+```
+
+#### Quando vira desastre
+
+Se `orders` tiver 1 milhão de linhas:
+
+→ 1 milhão de buscas no índice.
+
+Isso é o clássico:
+
+**nested loop explosion**
+
+#### :two: Hash Join
+
+O banco faz:
+
+1. lê `users`
+2. cria tabela hash em RAM
+3. percorre `orders`
+4. consulta o hash
+
+Ou seja:
+
+```
+users vira um mapa em memória
+orders só consulta
+```
+
+#### Quando é ótimo
+
+- tabelas grandes
+- sem índice útil
+- joins por igualdade
+
+Exemplo:
+
+```sql
+JOIN users ON users.country = orders.country
+```
+
+#### Custo
+
+- usa RAM (work_mem)
+- pode fazer spill para disco se grande demais
+
+#### :three: Merge Join
+
+Funciona como dois ponteiros:
+
+```
+orders ordenado
+users ordenado
+anda simultaneamente
+```
+
+Nenhuma busca aleatória.
+
+#### Quando é ótimo
+
+- ambas ordenadas
+- range join
+- índices B-Tree compatíveis
+
+Exemplo:
+
+```sql
+JOIN users ON users.id = orders.user_id
+ORDER BY users.id
+```
+
+Muito eficiente para grandes conjuntos ordenados.
+
+#### Por que isso importa
+
+O planner decide baseado na estimativa de linhas.
+
+Se estatística diz:
+
+```
+orders = 10 linhas
+```
+
+Ele escolhe nested loop.
+
+Mas se na realidade:
+
+```
+orders = 5 milhões
+```
+
+Você ganha uma query extremamente lenta.
+
+E a query parece “normal”.
+
+#### Sintoma clássico em produção
+
+Nada mudou no código.
+Mas a tabela cresceu.
+
+De repente:
+
+- CPU do banco sobe
+- endpoint específico fica lento
+
+Você roda:
+
+```sql
+EXPLAIN ANALYZE
+```
+
+E vê:
+
+```
+Nested Loop (esperava 10 linhas)
+real: 2.000.000
+```
+
+Isso quase sempre é:
+
+> estatística incorreta → join errado
+
+Regra prática
+
+| Join        | Melhor cenário            |
+| ----------- | ------------------------- |
+| Nested Loop | poucos registros + índice |
+| Hash Join   | muitos registros          |
+| Merge Join  | dados ordenados           |
+
+### Advisory lock
+
+Normalmente você trava algo assim:
+
+```sql
+SELECT * FROM orders WHERE id = 10 FOR UPDATE;
+```
+
+Isso funciona quando:
+→ o recurso é uma **linha existente**.
+
+Mas e quando o recurso é lógico?
+
+Exemplos:
+
+- gerar fatura mensal do usuário
+- processar webhook
+- importar arquivo
+- rodar cron em múltiplos servidores
+
+Você não tem uma linha específica para travar.
+
+Se duas instâncias da API rodarem:
+
+→ você executa duas vezes.
+
+#### O que o advisory lock faz
+
+Você cria um “cadeado lógico”:
+
+```sql
+SELECT pg_advisory_lock(12345);
+```
+
+Agora, qualquer outra sessão que tentar o mesmo número:
+
+```sql
+SELECT pg_advisory_lock(12345);
+```
+
+vai esperar.
+
+Você acabou de criar um **mutex distribuído usando o PostgreSQL**.
+
+#### Exemplo real — webhook duplicado
+
+Gateway de pagamento envia 2 vezes:
+
+```
+payment_id = 9981
+```
+
+Você:
+
+```sql
+SELECT pg_try_advisory_lock(9981);
+```
+
+Se retornar `false`:
+→ outro worker já está processando.
+
+Evita duplicidade.
+
+#### Diferença principal
+
+| FOR UPDATE         | Advisory lock        |
+| ------------------ | -------------------- |
+| trava linha física | trava recurso lógico |
+| depende de tabela  | independente         |
+| automático no MVCC | controlado pela app  |
+
+#### Tipos
+
+**Session lock**
+
+```
+pg_advisory_lock
+```
+
+Libera ao fechar conexão.
+
+**Transaction lock**
+
+```
+pg_advisory_xact_lock
+```
+
+Libera no commit/rollback (mais seguro).
+
+#### Quando usar
+
+Use advisory lock quando:
+
+- não existe linha para travar
+- coordenação entre múltiplos serviços
+- evitar processamento duplicado
+- jobs distribuídos
+
+#### Importante
+
+Não substitui constraint.
+
+Ele evita concorrência,
+mas não garante integridade permanente.
+
+Sempre combine com:
+
+- unique index
+- idempotência
+
+### Replication Lag
+
+é o tempo entre **commit no primary** e **aplicação na replica**.
+
+Agora o ponto importante:
+
+a réplica não é apenas “copiar dados”.
+
+Ela faz:
+
+1. receber WAL pela rede
+2. gravar WAL localmente
+3. aplicar mudanças página por página
+4. atualizar índices
+
+Isso chama **WAL replay**.
+
+#### Por que o lag aparece
+
+O primário produz WAL numa velocidade:
+
+```
+writes por segundo
+```
+
+A réplica consome numa velocidade:
+
+```
+replay por segundo
+```
+
+Se:
+
+```
+produção > consumo
+```
+
+→ o atraso cresce.
+
+Isso ocorre quando:
+
+- relatório pesado na réplica
+- disco da réplica lento
+- rede congestionada
+- pico de escrita no primário
+- autovacuum pesado
+
+#### Efeito pouco conhecido (importante)
+
+Lag não afeta só leitura.
+
+Ele também afeta o **primário**.
+
+Por quê?
+
+O PostgreSQL não pode reciclar segmentos WAL que a réplica ainda não consumiu.
+
+Resultado:
+
+- diretório pg_wal cresce
+- mais I/O
+- checkpoints mais pesados
+
+Ou seja:
+
+> réplica lenta pode degradar o primário.
+
+```sql
+Como medir
+SELECT application_name,
+       write_lag,
+       flush_lag,
+       replay_lag
+FROM pg_stat_replication;
+```
+
+Ou comparar:
+
+```
+pg_current_wal_lsn()
+pg_last_wal_replay_lsn()
+```
+
+#### Sintoma clássico em aplicação
+
+Usuário:
+
+1. cria pedido
+2. abre página de pedidos
+3. não vê pedido
+4. atualiza página → aparece
+
+Intermitente.
+
+Não é bug de código.
+É lag.
+
+#### Mitigação real
+
+- rotas críticas → primário
+- dashboards → réplica
+- sticky session após escrita
+- limitar carga analítica na réplica
+- hardware similar ao primário
+
+### Write amplification
+
+Imagine uma tabela simples:
+
+```
+orders
+(id, user_id, status, created_at, total)
+```
+
+Sem índices.
+
+Você executa:
+
+```sql
+INSERT INTO orders VALUES (...);
+```
+
+O PostgreSQL faz basicamente:
+
+1. escreve a linha no heap
+2. grava no WAL
+3. commit
+
+Rápido.
+
+Agora você “otimiza” leitura e cria:
+
+```sql
+CREATE INDEX idx_user       ON orders(user_id);
+CREATE INDEX idx_status     ON orders(status);
+CREATE INDEX idx_created    ON orders(created_at);
+CREATE INDEX idx_total      ON orders(total);
+CREATE INDEX idx_composite  ON orders(user_id, status);
+```
+
+Agora o MESMO INSERT faz:
+
+1. escrever no heap
+2. atualizar índice user_id
+3. atualizar índice status
+4. atualizar índice created_at
+5. atualizar índice total
+6. atualizar índice composto
+7. escrever tudo no WAL
+8. commit
+
+Uma escrita virou **7 escritas físicas + WAL**.
+
+Isso é write amplification.
+
+#### E o UPDATE é pior
+
+Lembra do MVCC:
+
+`UPDATE` não altera linha → cria nova versão.
+
+Então:
+
+UPDATE orders SET status='paid' WHERE id=10;
+
+O banco:
+
+1. cria nova tupla no heap
+2. invalida entradas antigas nos índices
+3. cria novas entradas nos índices
+4. gera WAL
+
+Se houver 6 índices:
+→ operação muito mais cara que parece.
+
+#### Efeito colateral
+
+Mais escrita → mais WAL:
+
+- mais flush
+- mais checkpoint
+- mais I/O
+- mais autovacuum
+
+Resultado:
+
+> leitura fica rápida <br>
+> escrita vira gargalo do sistema
+
+#### Sintoma clássico em produção
+
+- sistema começa a crescer
+- criam índices para melhorar SELECT
+- semanas depois:
+  - INSERT lento
+  - fila de jobs aumenta
+  - CPU do banco alta
+
+Causa:
+
+não é query pesada
+é **escrita amplificada pelos índices**.
+
+#### Regra prática
+
+Índice só deve existir se:
+
+> uma query crítica realmente o utiliza.
+
+Índice “por garantia” é erro comum.
+
+#### Como diagnosticar
+
+Veja:
+
+```sql
+SELECT relname, idx_scan
+FROM pg_stat_user_indexes;
+```
+
+Índices com idx_scan = 0:
+→ nunca usados
+→ só prejudicam escrita.
+
+### Transação com muitas operações, `COMMIT` e picos de latência
+
+Aqui existe um detalhe pouco intuitivo:
+
+Durante a transação, o PostgreSQL **não garante durabilidade ainda**.
+
+Ele vai fazendo:
+
+```
+UPDATE ...
+INSERT ...
+DELETE ...
+```
+
+Essas operações:
+
+- geram WAL
+- ficam em memória
+- ainda não estão garantidas no disco
+
+O banco só promete:
+
+> “se eu cair agora, posso perder essa transação”.
+
+A garantia só acontece no:
+
+```sql
+COMMIT;
+```
+
+#### O que realmente ocorre no COMMIT
+
+No momento do commit o PostgreSQL precisa:
+
+1. escrever todos os registros WAL pendentes
+2. forçar gravação no disco (fsync)
+3. marcar a transação como committed
+4. liberar locks
+5. tornar dados visíveis
+
+Esse `fsync` é caro porque:
+disco é milhares de vezes mais lento que RAM.
+
+#### Por que muitas operações pioram
+
+Imagine:
+
+1000 inserts dentro de uma transação:
+
+Durante execução:
+→ tudo parece rápido
+
+No final:
+
+```sql
+COMMIT;
+```
+
+Agora o banco precisa garantir a durabilidade de **todos os 1000**.
+
+Então ocorre:
+
+- grande flush de WAL
+- espera de I/O
+- outras transações aguardam
+
+Sintoma:
+a aplicação parece travar **no commit**, não na query.
+
+#### Efeito colateral
+
+Outras sessões também esperam.
+
+Por quê?
+
+O WAL flush é praticamente serializado:
+
+- vários commits simultâneos
+- todos esperam o mesmo disco
+
+Isso cria:
+
+> commit queue
+
+Você vê:
+
+- CPU baixa
+- banco lento
+- latência alta
+
+Causa: I/O de durabilidade.
+
+#### Caso clássico
+
+Código:
+
+```sql
+BEGIN
+for 10k registros:
+   INSERT
+COMMIT
+```
+
+Tudo rápido → último comando demora segundos.
+
+Dev acha:
+
+> “o commit é lento”
+
+Na verdade:
+o commit está pagando **todo o custo acumulado**.
+
+#### Como resolver
+
+- commits a cada N registros
+- usar COPY em vez de INSERT massivo
+- evitar transações gigantes
+- fila de escrita
+
+#### Conclusão
+
+Queries rápidas não significam transação barata.
+
+O custo real da escrita no PostgreSQL ocorre no:
+
+> COMMIT (durabilidade via WAL).
+
+### Alta concorrência
+
+#### Código comum (errado)
+
+```sql
+BEGIN;
+
+SELECT stock FROM inventory WHERE product_id = 10;
+
+-- aplicação verifica se stock > 0
+
+UPDATE inventory
+SET stock = stock - 1
+WHERE product_id = 10;
+
+COMMIT;
+```
+
+Cenário com duas requisições simultâneas:
+
+| Transação A | Transação B |
+| ----------- | ----------- |
+| SELECT → 1  |             |
+|             | SELECT → 1  |
+| UPDATE → 0  |             |
+|             | UPDATE → -1 |
+
+Resultado:
+estoque negativo.
+
+Mesmo com transação.
+
+Por quê?
+
+Porque `SELECT` não bloqueia atualização.
+
+MVCC permite leitura concorrente.
+
+### Solução correta 1 — UPDATE condicional atômico
+
+```sql
+UPDATE inventory
+SET stock = stock - 1
+WHERE product_id = 10
+AND stock > 0;
+```
+
+Depois verifica:
+
+```
+rows_affected == 1 → sucesso
+rows_affected == 0 → estoque insuficiente
+```
+
+Agora a validação e a escrita são **uma única operação atômica**.
+
+Sem race condition.
+
+### Solução correta 2 — SELECT FOR UPDATE
+
+```sql
+BEGIN;
+
+SELECT stock
+FROM inventory
+WHERE product_id = 10
+FOR UPDATE;
+
+-- agora a linha está bloqueada
+
+UPDATE inventory
+SET stock = stock - 1
+WHERE product_id = 10;
+
+COMMIT;
+```
+
+Isso serializa as operações.
+
+### Solução ainda mais robusta
+
+Adicionar constraint:
+
+```
+ALTER TABLE inventory
+ADD CONSTRAINT stock_non_negative
+CHECK (stock >= 0);
+```
+
+Mesmo que lógica falhe, banco impede estado inválido.
+
+### O que realmente estava acontecendo
+
+Não era problema de isolamento baixo.
+
+Era:
+
+> validação feita fora da operação atômica.
+
+Isso é padrão comum em APIs.
