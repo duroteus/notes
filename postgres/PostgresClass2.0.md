@@ -4,65 +4,67 @@ Conteúdo reorganizado para aprendizado incremental e fluxo linear, em ordem de 
 
 ## Sumário
 
-### Parte 1: Fundamentos
+### [Parte 1: Fundamentos](#parte-1-fundamentos)
 
-1. ACID
-2. MVCC → Dead tuples → VACUUM → Wraparound
-3. WAL
-4. Checkpoints
+1. [ACID](#1-o-que-significa-o-acronimo-acid)
+2. [MVCC → Dead tuples → VACUUM → Wraparound](#2-mvcc-dead-tuples-vacuum-wraparound)
+3. [WAL](#3-wal-write-ahead-log)
+4. [Checkpoints](#4-checkpoints)
 
-### Parte 2: Isolamento e Concorrência
+### [Parte 2: Isolamento e Concorrência](#parte-2-isolamento-e-concorrencia)
 
-5. Níveis de isolamento
-6. Tipos de locks (incluindo Advisory)
-7. Deadlock
-8. Contenção de locks e Hot Row Contention
+5. [Níveis de isolamento](#5-niveis-de-isolamento-no-postgresql)
+6. [Tipos de locks](#6-tipos-de-locks-incluindo-advisory-locks)
+7. [Deadlock](#7-deadlock)
+8. [Contenção de locks e Hot Row](#8-contencao-de-locks-e-hot-row-contention)
 
-### Parte 3: Planner e Busca
+### [Parte 3: Planner e Busca](#parte-3-planner-e-busca)
 
-9. Estatísticas e ANALYZE
-10. Sequential vs Index Scan
-11. Índices (B-Tree, Hash, GIN, GiST, BRIN, Partial, Composite, Index Only Scan)
-12. EXPLAIN ANALYZE e tipos de Join
+9. [Estatísticas e ANALYZE](#9-estatisticas-e-analyze)
+10. [Sequential vs Index Scan](#10-como-o-postgresql-busca-os-dados-sequential-vs-index-scan)
+11. [Índices](#11-indices-do-postgresql)
+12. [EXPLAIN ANALYZE e Joins](#12-explain-analyze-e-tipos-de-join)
 
-### Parte 4: Operações
+### [Parte 4: Operações](#parte-4-operacoes)
 
 13. Paginação OFFSET vs Keyset
-14. N+1, COUNT(\*), Write amplification
+14. [N+1, COUNT(*), Write amplification](#14-n1-queries-count-e-write-amplification)
 
-### Parte 5: Arquitetura
+### [Parte 5: Arquitetura](#parte-5-arquitetura)
 
-15. Pool de conexões e PgBouncer
-16. Transações longas
-17. Prepared Statements
+15. [Pool de conexões e PgBouncer](#15-pool-de-conexões-e-pgbouncer)
+16. [Transações longas](#16-o-problema-de-transações-longas)
+17. [Prepared Statements](#17-prepared-statements)
 
-### Parte 6: Alta Disponibilidade
+### [Parte 6: Alta Disponibilidade](#parte-6-alta-disponibilidade-e-backup)
 
-18. Réplicas e Replication Lag
-19. Failover
-20. PITR
-21. Replicação física vs lógica
+18. [Réplicas e Replication Lag](#18-réplicas-e-replication-lag)
+19. [Failover](#19-failover)
+20. [PITR](#20-pitr-point-in-time-recovery)
+21. [Replicação física vs lógica](#21-replicação-física-vs-lógica)
 
-### Parte 7: Práticas
+### [Parte 7: Práticas](#parte-7-práticas)
 
-22. Migrations
-23. Idempotência
-24. Fila e Starvation
+22. [Migrations](#22-migrations)
+23. [Idempotência](#23-idempotência-no-postgresql)
+24. [Fila e Starvation](#24-fila-usando-postgresql-e-starvation)
 
-### Parte 8: Diagnóstico
+### [Parte 8: Diagnóstico](#parte-8-diagnóstico)
 
-25. pg_stat_activity e pg_stat_statements
+25. [pg_stat_activity e pg_stat_statements](#25-pg_stat_activity-e-pg_stat_statements)
 
-### Parte 9: Avançado
+### [Parte 9: Avançado](#parte-9-avançado)
 
-26. Cache (Redis) x PostgreSQL
-27. Alta concorrência e race condition
-28. Transação longa e pico no COMMIT
+26. [Cache (Redis) x PostgreSQL](#26-cache-redis-x-postgresql)
+27. [Alta concorrência e race condition](#27-alta-concorrência--race-condition-e-soluções)
+28. [Transação longa e pico no COMMIT](#28-transação-com-muitas-operações-e-pico-no-commit)
 
 ---
 
+<a id="parte-1-fundamentos"></a>
 ## Parte 1: Fundamentos
 
+<a id="1-o-que-significa-o-acronimo-acid"></a>
 ### 1. O que significa o acrônimo ACID?
 
 #### A — Atomicidade
@@ -145,6 +147,7 @@ Se houver crash:
 
 ---
 
+<a id="2-mvcc-dead-tuples-vacuum-wraparound"></a>
 ### 2. MVCC → Dead tuples → VACUUM → Transaction ID Wraparound
 
 #### MVCC — o que realmente acontece dentro do PostgreSQL
@@ -365,6 +368,7 @@ Ou seja:
 
 ---
 
+<a id="3-wal-write-ahead-log"></a>
 ### 3. WAL (Write-Ahead Log)
 
 #### O problema que o WAL resolve
@@ -441,6 +445,7 @@ Por isso SSD/NVMe impacta muito PostgreSQL.
 
 ---
 
+<a id="4-checkpoints"></a>
 ### 4. Checkpoints
 
 Quando você executa:
@@ -506,8 +511,10 @@ Sem checkpoint:
 
 ---
 
+<a id="parte-2-isolamento-e-concorrencia"></a>
 ## Parte 2: Isolamento e Concorrência
 
+<a id="5-niveis-de-isolamento-no-postgresql"></a>
 ### 5. Níveis de isolamento no PostgreSQL
 
 #### Os níveis no PostgreSQL
@@ -598,6 +605,7 @@ APIs financeiras geralmente usam:
 
 ---
 
+<a id="6-tipos-de-locks-incluindo-advisory-locks"></a>
 ### 6. Tipos de locks (incluindo Advisory Locks)
 
 #### Row-Level Locks (mais comuns)
@@ -775,6 +783,7 @@ Se houver DDL em horário errado → freeze da aplicação.
 
 ---
 
+<a id="7-deadlock"></a>
 ### 7. Deadlock
 
 #### Exemplo real
@@ -845,6 +854,7 @@ Se você não tratar retry
 
 ---
 
+<a id="8-contencao-de-locks-e-hot-row-contention"></a>
 ### 8. Contenção de locks e Hot Row Contention
 
 #### Contenção de locks
@@ -1054,8 +1064,10 @@ Concorrência excessiva reduz eficiência.
 
 ---
 
+<a id="parte-3-planner-e-busca"></a>
 ## Parte 3: Planner e Busca
 
+<a id="9-estatisticas-e-analyze"></a>
 ### 9. Estatísticas e ANALYZE
 
 Toda vez que você roda:
@@ -1139,6 +1151,7 @@ Sem `ANALYZE` o PostgreSQL fica "cego" para otimização.
 
 ---
 
+<a id="10-como-o-postgresql-busca-os-dados-sequential-vs-index-scan"></a>
 ### 10. Como o PostgreSQL busca os dados — Sequential vs Index Scan
 
 O PostgreSQL tem um componente crítico:
@@ -1250,6 +1263,7 @@ Ou seja, **o PostgreSQL não escolhe índice por existir índice. Ele escolhe pe
 
 ---
 
+<a id="11-indices-do-postgresql"></a>
 ### 11. Índices do PostgreSQL
 
 #### 1. B-Tree (90% dos casos)
@@ -1546,6 +1560,7 @@ Cada `INSERT/UPDATE`:
 
 ---
 
+<a id="12-explain-analyze-e-tipos-de-join"></a>
 ### 12. EXPLAIN ANALYZE e tipos de Join
 
 #### Onde entram os custos (cost)
@@ -1729,8 +1744,10 @@ Quando é ótimo
 
 ---
 
+<a id="parte-4-operacoes"></a>
 ## Parte 4: Operações
 
+<a id="13-paginacao-offset-x-keyset"></a>
 ### 13. Paginação: OFFSET x Keyset
 
 #### OFFSET pagination
@@ -1807,7 +1824,8 @@ Nenhum descarte de linhas.
 
 ---
 
-### 14. N+1 queries, COUNT(\*) e Write amplification
+<a id="14-n1-queries-count-e-write-amplification"></a>
+### 14. N+1 queries, COUNT(*) e Write amplification
 
 #### O problema de N+1 queries
 
@@ -1966,8 +1984,10 @@ FROM pg_stat_user_indexes;
 
 ---
 
+<a id="parte-5-arquitetura"></a>
 ## Parte 5: Arquitetura
 
+<a id="15-pool-de-conexoes-e-pgbouncer"></a>
 ### 15. Pool de conexões e PgBouncer
 
 Aqui está a parte crítica:
@@ -2096,6 +2116,7 @@ Resultado: VACUUM não consegue limpar.
 
 ---
 
+<a id="16-o-problema-de-transacoes-longas"></a>
 ### 16. O problema de transações longas
 
 Lembre do MVCC:
@@ -2163,6 +2184,7 @@ Uma única conexão esquecida pode degradar todo o banco.
 
 ---
 
+<a id="17-prepared-statements"></a>
 ### 17. Prepared Statements
 
 Quando você executa normalmente:
@@ -2222,8 +2244,10 @@ Ou pior: **parameter sniffing** — plano cacheado para um valor raro usado no p
 
 ---
 
+<a id="parte-6-alta-disponibilidade-e-backup"></a>
 ## Parte 6: Alta Disponibilidade e Backup
 
+<a id="18-replicas-e-replication-lag"></a>
 ### 18. Réplicas e Replication Lag
 
 Lembra do WAL?
@@ -2320,6 +2344,7 @@ FROM pg_stat_replication;
 
 ---
 
+<a id="19-failover"></a>
 ### 19. Failover
 
 Failover significa: **promover standby a primary** quando o primário morre.
@@ -2350,6 +2375,7 @@ Não há perda, mas: commit mais lento, depende da latência da rede.
 
 ---
 
+<a id="20-pitr-point-in-time-recovery"></a>
 ### 20. PITR (Point-in-Time Recovery)
 
 O WAL é um **registro cronológico de tudo que aconteceu no banco**.
@@ -2381,6 +2407,7 @@ Viagem no tempo do banco.
 
 ---
 
+<a id="21-replicacao-fisica-vs-logica"></a>
 ### 21. Replicação física vs lógica
 
 **Replicação física (streaming replication)**
