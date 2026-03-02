@@ -34,6 +34,7 @@
 
 ---
 
+<a id="1-o-que-e-mvcc-multi-version-concurrency-control-no-postgresql-e-qual-problema-de-concorrencia-ele-resolve-na-pratica-dentro-de-um-sistema-com-multiplas-transacoes-simultaneas"></a>
 #### 1) O que é MVCC (Multi-Version Concurrency Control) no PostgreSQL e qual problema de concorrência ele resolve na prática dentro de um sistema com múltiplas transações simultâneas?
 
 MVCC é o mecanismo de concorrência do PostgreSQL que permite **leituras não bloqueantes**.
@@ -54,6 +55,7 @@ Impacto prático:
 
 Custo: surgem **dead tuples**, exigindo `VACUUM`.
 
+<a id="2-o-que-e-uma-dead-tuple-no-postgresql-e-por-que-ela-e-uma-consequencia-inevitavel-do-mvcc"></a>
 #### 2) O que é uma dead tuple no PostgreSQL e por que ela é uma consequência inevitavel do MVCC?
 
 Dead tuple é uma versão antiga de uma linha que **não é mais visível para nenhuma transação ativa**.
@@ -73,6 +75,7 @@ Impactos em produção:
 
 Dead tuples são consequência direta do MVCC.
 
+<a id="3-explique-como-o-vacuum-funciona-internamente-e-qual-a-diferenca-entre"></a>
 #### 3) Explique como o VACUUM funciona internamente e qual a diferença entre:
 
 - **VACUUM**
@@ -97,6 +100,7 @@ Trade-offs:
 
 VACUUM também previne **transaction ID wraparound**, um problema crítico que pode parar o banco.
 
+<a id="4-o-que-e-o-wal-write-ahead-log-no-postgresql-e-por-que-o-banco-escreve-primeiro-no-wal-antes-de-gravar-nas-tabelas"></a>
 #### 4) O que é o WAL (Write-Ahead Log) no PostgreSQL e por que o banco escreve primeiro no WAL antes de gravar nas tabelas?
 
 WAL (Write-Ahead Log) é o log sequencial onde o PostgreSQL registra **todas as alterações antes de aplicá-los** nos arquivos de dados.
@@ -118,6 +122,7 @@ Trade-off:
 - aumenta I/O
 - depende de configuração de `checkpoint` e `wal_buffers`
 
+<a id="5-explique-o-que-e-um-checkpoint-no-postgresql-e-como-ele-se-relaciona-diretamente-com-o-wal-e-com-picos-de-latencia-em-producao"></a>
 #### 5) Explique o que é um checkpoint no PostgreSQL e como ele se relaciona diretamente com o WAL e com picos de latência em produção
 
 Checkpoint é o processo que grava em disco todas as páginas "sujas" (dirty pages) que ainda estão apenas em memória (shared buffers).
@@ -139,6 +144,7 @@ Trade-off:
 - checkpoints frequentes -> mais I/O constante
 - checkpoints raros -> recovery lento e WAL gigante
 
+<a id="6-explique-as-propriedades-acid-de-uma-transacao-e-principalmente-qual-delas-o-wal-garante-diretamente-e-qual-o-mvcc-ajuda-a-implementar"></a>
 #### 6) Explique as propriedades ACID de uma transação e, principalmente, qual delas o WAL garante diretamente e qual o MVCC ajuda a implementar.
 
 **Atomicidade:** a transação é aplicada integralmente ou revertida integralmente. Implementada via WAL e mecanismos de rollback.
@@ -152,6 +158,7 @@ Trade-off:
 WAL garante diretamente **Durabilidade e Atomicidade**.
 MVCC é a base do **Isolamento**.
 
+<a id="7-explique-os-niveis-de-isolamento-no-postgresql-e-diga"></a>
 #### 7) Explique os níveis de isolamento no PostgreSQL e diga:
 
 **1.** Qual é o padrão?
@@ -172,6 +179,7 @@ Ele pode ocorrer em **READ COMMITED** e é previnido em **SERIALIZABLE**.
 
 Trade-off: quanto maior o isolamento, menor a concorrência e maior chance de abort de transação.
 
+<a id="8-o-que-e-um-deadlock-no-postgresql-como-ele-acontece-entre-duas-transacoes-e-o-que-o-banco-faz-quando-detecta-um"></a>
 #### 8) O que é um deadlock no PostgreSQL, como ele acontece entre duas transações e o que o banco faz quando detecta um?
 
 Deadlock ocorre quando duas (ou mais) transações ficam esperando locks umas das outras, criando um ciclo de dependência.
@@ -197,6 +205,7 @@ Prevenção:
 - transações curtas
 - evitar locks desnecessários
 
+<a id="9-quais-sao-os-tipos-de-locks-no-postgresql-row-level-table-level-e-advisory-e-quando-cada-um-e-usado-na-pratica"></a>
 #### 9) Quais são os tipos de locks no PostgreSQL (row-level, table-level e advisory) e quando cada um é usado na prática?
 
 **Row-level locks:** aplicados automaticamente em `UPDATE`, `DELETE` e `SELECT FOR UPDATE`. Bloqueiam apenas a linha específica.
@@ -211,6 +220,7 @@ Advisory -> controle distribuído, jobs, filas.
 
 Trade-off: mais locks -> menos concorrência -> maior risco de deadlock.
 
+<a id="10-qual-a-diferenca-entre"></a>
 #### 10) Qual a diferença entre:
 
 - Index Scan
@@ -232,6 +242,7 @@ Ele pode preferir Seq Scan quando:
 
 Índice não é sempre mais rápido; acesso aleatório ao heap pode custar mais que leitura sequencial.
 
+<a id="11-o-que-e-um-explain-analyze-e-qual-a-diferenca-entre"></a>
 #### 11) O que é um EXPLAIN ANALYZE e qual a diferença entre:
 
 - **custo estimado**
@@ -256,6 +267,7 @@ Usos:
 
 É essencial em produção porque otimização sem plano real é tentativa e erro.
 
+<a id="12-quais-sao-os-tipos-principais-de-indices-no-postgresql-e-em-que-tipo-de-dado-ou-consulta-cada-um-deve-ser-usado"></a>
 #### 12) Quais são os tipos principais de índices no PostgreSQL e em que tipo de dado ou consulta cada um deve ser usado?
 
 **B-tree (padrão)**: igualdade e range(`=`, `<`, `>`, `BETWEEN`, `ORDER BY`). Usado para id, email, datas.
@@ -270,6 +282,7 @@ Usos:
 
 Escolha errada de índice pode piorar performance e aumentar custo de escrita.
 
+<a id="13-o-que-e-um-covering-index-index-only-scan-e-qual-relacao-ele-tem-com-o-visibility-map-e-o-vacuum"></a>
 #### 13) O que é um covering index (index-only scan) e qual relação ele tem com o _visibility map_ e o VACUUM?
 
 Convering index ocorre quando a query pode ser respondida **apenas pelo índice**, sem acessar o heap (tabela).
@@ -287,6 +300,7 @@ Sem VACUUM, o banco precisa verificar o heap para cehcar visibilidade -> perde o
 
 Resultado: VACUUM impacta diretamente performance de leitura.
 
+<a id="14-explique-o-que-e-um-partial-index-e-um-composite-index-e-em-qual-situacao-um-indice-composto-na-ordem-errada-deixa-de-ser-utilizado-pelo-planner"></a>
 #### 14) Explique o que é um partial index e um composite index, e em qual situação um índice composto na ordem errada deixa de ser utilizado pelo planner.
 
 **Partial index** é um índice criado apenas para um subconjunto das linhas usando `WHERE`.
@@ -320,6 +334,7 @@ Não serve para:
 
 Escolha errada da ordem -> índice ignorado.
 
+<a id="15-explique-a-diferenca-entre-offset-pagination-e-curosr-keyset-pagination-e-por-que-offset-degrada-drasticamente-performance-em-tabelas-grandes"></a>
 #### 15) Explique a diferença entre OFFSET pagination e curosr (keyset) pagination, e por que OFFSET degrada drasticamente performance em tabelas grandes.
 
 **OFFSET pagination** usa `LIMIT ... OFFSET ...` e o banco precisa percorrer e descartar linhas anteriores.
@@ -342,6 +357,7 @@ Keyset:
 
 Impacto: OFFSET causa alto I/O, CPU e saturação de conexões
 
+<a id="16-o-que-e-connection-pooling-no-postgresql-e-por-que-uma-aplicacao-nodejs-pode-derrubar-um-banco-apenas-abrindo-muitas-conexoes-simultaneas"></a>
 #### 16) O que é connection pooling no PostgreSQL e por que uma aplicação Node.js pode derrubar um banco apenas abrindo muitas conexões simultâneas?
 
 Connection pooling mantém um conjunto fixo de conexões abertas e as reutiliza entre requisições.
@@ -362,6 +378,7 @@ O pool limita concorrência efetiva e transforma milhares de requests em poucas 
 
 Ferramentas comumns: `pg.Pool` (app side) ou `PgBouncer` (server side).
 
+<a id="17-em-uma-api-concorrente-por-que-transacoes-longas-sao-perigosas-no-postgresql-e-como-elas-afetam-diretamente-o-vacuum-mvcc-e-crescimento-da-tabela"></a>
 #### 17) Em uma API concorrente, por que transações longas são perigosas no PostgreSQL e como elas afetam diretamente o VACUUM, MVCC e crescimento da tabela?
 
 Uma transação longa mantém um snapshot antigo ativo.
@@ -385,6 +402,7 @@ Boas práticas:
 - nunca manter transação aberta aguardando I/O externo
 - evitar `BEGIN` em requests HTTP longos
 
+<a id="18-o-que-e-uma-replicacao-streaming-replication-no-postgresql-o-que-e-uma-read-replica-e-qual-problema-ela-resolve-e-qual-problema-ela-nao-resolve"></a>
 #### 18) O que é uma replicação (streaming replication) no PostgreSQL, o que é uma read replica, e qual problema ela resolve — e qual problema ela NÃO resolve?
 
 Streaming replication replica continuamente o WAL do servidor primário para um servidor standby.
@@ -406,6 +424,7 @@ Não resolve:
 
 Existe atraso (replication lag), então não há consistência forte imediata.
 
+<a id="19-o-que-e-failover-no-postgresql-e-qual-e-o-risco-de-perda-de-dados-dependendo-do-tipo-de-replicacao-configurada"></a>
 #### 19) O que é failover no PostgreSQL e qual é o risco de perda de dados dependendo do tipo de replicação configurada?
 
 Failover é o processo de promover uma réplica para primária após falha do servidor principal.
@@ -421,6 +440,7 @@ Trade-off:
 
 Failover requer mecanismos de orquestração (ex.: Patroni) e reconfiguração de clientes.
 
+<a id="20-o-que-sao-migrations-com-zero-downtime-no-postgresql-e-por-que-um-simples-alter-table-pode-derrubar-uma-aplicacao-em-producao"></a>
 #### 20) O que são migrations com zero downtime no PostgreSQL e por que um simples `ALTER TABLE` pode derrubar uma aplicação em produção?
 
 Zero-downtime migration é alterar o schema sem bloquear operações da aplicação.
@@ -443,6 +463,7 @@ Boas práticas:
 - deploy compatível com dois schemas
 - migração + código versionados
 
+<a id="21-o-que-sao-prepared-statements-no-postgresql-e-por-que-eles-podem-melhorar-performance-e-tambem-causar-problemas-quando-usados-incorretamente-com-pool-de-conexoes"></a>
 #### 21) O que são prepared statements no PostgreSQL e por que eles podem melhorar performance — e também causar problemas quando usados incorretamente com pool de conexões?
 
 Prepared statement é uma query previamente **parseada e planejada** pelo PostgreSQL, reutilizada com parâmetros diferentes.
@@ -466,6 +487,7 @@ Uso correto:
 - bom para queries muito repetidas
 - cuidado com pools e PgBouncer
 
+<a id="22-o-que-e-o-problema-n1-queries-por-que-orms-frequentemente-causam-isso-e-qual-o-impacto-real-no-postgresql-sob-carga-concorrente"></a>
 #### 22) O que é o problema N+1 queries, por que ORMs frequentemente causam isso, e qual o impacto real no PostgreSQL sob carga concorrente?
 
 N + 1 ocorre quando a aplicação executa 1 query principal e depois uma query adicional para cada registro retornado.
@@ -490,6 +512,7 @@ Solução:
 
 Não é apenas latência — degrada todo o banco sob concorrência.
 
+<a id="23-como-voce-implementaria-idempotencia-em-uma-api-usando-postgresql-para-evitar-por-exemplo-dupla-cobranca-de-pagamento"></a>
 #### 23) Como você implementaria idempotência em uma API usando PostgreSQL para evitar, por exemplo, dupla cobrança de pagamento?
 
 Idempotência garante que múltiplas execuções da mesma operação produzam o mesmo resultado.
@@ -516,6 +539,7 @@ Alternativamente:
 
 UPDATE condicional sozinho não é suficiente sob concorrência real.
 
+<a id="24-como-voce-implementaria-uma-fila-queue-usando-postgresql-garantindo-que-multiplos-workers-processem-jobs-sem-pegar-o-mesmo-item-duas-vezes"></a>
 #### 24) Como você implementaria uma fila (queue) usando PostgreSQL, garantindo que múltiplos workers processem jobs sem pegar o mesmo item duas vezes?
 
 A fila é implementada com uma tabela de jobs e consumo usando `SELECT ... FOR UPDATE SKIP LOCKED`.
@@ -540,6 +564,7 @@ Após processar: `UPDATE jobs SET status='done'`
 - consistente
 - limitado por throughput do banco
 
+<a id="25-o-que-e-analyze-no-postgresql-que-tipo-de-estatistica-ele-coleta-e-por-que-estatisticas-desatualizadas-fazem-o-planner-escolher-planos-ruins"></a>
 #### 25) O que é ANALYZE no PostgreSQL, que tipo de estatística ele coleta e por que estatísticas desatualizadas fazem o planner escolher planos ruins?
 
 `ANALYZE` coleta estatísticas das colunas para o query planner estimar cardinalidade.
@@ -560,6 +585,7 @@ Se a estimativa estiver errada -> escolhe plano errado (Seq Scan vs Index Scan, 
 
 Estatísticas desatualizadas causam slow queries mesmo com índices corretos.
 
+<a id="26-o-que-e-o-pg_stat_activity-e-pg_stat_statements-e-como-voce-usaria-ambos-para-investigar-uma-producao-lenta"></a>
 #### 26) O que é o pg_stat_activity e pg_stat_statements, e como você usaria ambos para investigar uma produção lenta?
 
 `pg_stat_activity` mostra as conexões ativas no momento:
@@ -592,6 +618,7 @@ Usado para identificar:
 `pg_stat_activity`= visão em tempo real
 `pg_stat_statements` = visão estatística acumulada
 
+<a id="27-o-que-e-pitr-point-in-time-recovery-no-postgresql-e-como-ele-utiliza-o-wal-para-restaurar-o-banco-ate-um-ponto-especifico-no-tempo"></a>
 #### 27) O que é PITR (Point-in-Time Recovery) no PostgreSQL e como ele utiliza o WAL para restaurar o banco até um ponto específico no tempo?
 
 PITR (Point-in-Time Recovery) permite restaurar o banco para um instante específico.
@@ -613,6 +640,7 @@ Sem WAL arquivado só é possível restaurar até o momento do backup.
 
 PITR depende de `archive_mode` e `archive_command`.
 
+<a id="28-qual-a-diferenca-entre-replicacao-fisica-e-replicacao-logica-no-postgresql-e-quando-voce-escolheria-cada-uma"></a>
 #### 28) Qual a diferença entre replicação física e replicação lógica no PostgreSQL e quando você escolheria cada uma?
 
 **Replicação física** replica os arquivos do banco a nível de página/bloco via WAL replay.
@@ -647,6 +675,7 @@ Lógica:
 - seletiva
 - maior overhead
 
+<a id="29-por-que-muitas-conexoes-simultaneas-executando-transacoes-curtas-ainda-podem-causar-contencao-de-locks-e-queda-de-throughput-no-postgresql-mesmo-sem-deadlocks"></a>
 #### 29) Por que muitas conexões simultâneas executando transações curtas ainda podem causar contenção de locks e queda de throughput no PostgreSQL, mesmo sem deadlocks?
 
 Mesmo transações curtas competem por:

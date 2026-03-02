@@ -1,9 +1,7 @@
-## Índice
-
 - [MVCC — o que realmente acontece dentro do PostgreSQL](#mvcc-o-que-realmente-acontece-dentro-do-postgresql)
 - [A consequência do MVCC — Dead tuples](#a-consequencia-do-mvcc-dead-tuples)
 - [E agora? VACUUM!](#e-agora-vacuum)
-- [Vamos falar de WAL (Write-Ahead Log)](#vamos-falar-de-wal-write-ahead-log)
+- [A consequência do MVCC — Dead tuples](#a-consequencia-do-mvcc-dead-tuples)
 - [E o que são os checkpoints?](#e-o-que-sao-os-checkpoints)
 - [O que significa o acrônimo ACID?](#o-que-significa-o-acronimo-acid)
 - [E quais são os niveis de isolamento no PostgreSQL?](#e-quais-sao-os-niveis-de-isolamento-no-postgresql)
@@ -29,6 +27,7 @@
 
 ---
 
+<a id="mvcc-o-que-realmente-acontece-dentro-do-postgresql"></a>
 ### MVCC — o que realmente acontece dentro do PostgreSQL
 
 Imagine uma tabela `users`:
@@ -117,6 +116,7 @@ Esse lixo são linhas que:
 - não são mais visíveis para ninguém
 - mas ainda estão ocupando espaço físico
 
+<a id="a-consequencia-do-mvcc-dead-tuples"></a>
 ### A consequência do MVCC — Dead tuples
 
 Quando ocorre:
@@ -159,6 +159,7 @@ Isso é um problema clássico em produção com:
 - replicação atrasada
 - carga alta de UPDATE/DELETE
 
+<a id="e-agora-vacuum"></a>
 ### E agora? VACUUM!
 
 #### O que o VACUUM realmente faz
@@ -247,7 +248,7 @@ o PostgreSQL entra em modo de proteção:
 Ou seja:
 **VACUUM não é otimização — é mecanismo de sobrevivência do banco**.
 
-### Vamos falar de WAL (Write-Ahead Log)
+### Você vai escutar falar MUITO do WAL (Write-Ahead Log)
 
 #### O problema que o WAL resolve
 
@@ -321,6 +322,7 @@ geralmente não é CPU nem query.
 
 Por isso SSD/NVMe impacta muito PostgreSQL.
 
+<a id="e-o-que-sao-os-checkpoints"></a>
 ### E o que são os checkpoints?
 
 Quando você executa:
@@ -384,6 +386,7 @@ Sem checkpoint:
 - WAL cresce indefinidamente
 - recovery ficaria gigantesco
 
+<a id="o-que-significa-o-acronimo-acid"></a>
 ### O que significa o acrônimo ACID?
 
 #### A — Atomicidade
@@ -464,6 +467,7 @@ Se houver crash:
 - recovery executa WAL
 - banco volta ao último commit confirmado
 
+<a id="e-quais-sao-os-niveis-de-isolamento-no-postgresql"></a>
 ### E quais são os niveis de isolamento no PostgreSQL?
 
 #### Os níveis no PostgreSQL
@@ -551,6 +555,7 @@ Problemas clássicos:
 APIs financeiras geralmente usam:
 `SERIALIZIBLE` ou locking explicito.
 
+<a id="o-que-e-deadlock-e-o-que-fazer-para-previnir"></a>
 ### O que é deadlock e o que fazer para previnir?
 
 #### Exemplo real
@@ -619,6 +624,7 @@ Se você não tratar retry
 - usuário recebe erro 500
 - operação falha mesmo sendo válida
 
+<a id="e-quais-sao-os-tipos-de-locks"></a>
 ### E quais são os tipos de locks?
 
 :one: **Row-Level Locks (mais comuns)**
@@ -707,6 +713,7 @@ Se a ordem de acesso for inconsistente → deadlock.
 Se transações forem longas → lock rentention alto.
 Se houver DDL em horário errado → freeze da aplicação.
 
+<a id="e-como-o-postgresql-busca-os-dados-nas-tabelas"></a>
 ### E como o PostgreSQL busca os dados nas tabelas?
 
 O PostgreSQL tem um componente crítico:
@@ -806,6 +813,7 @@ Sintomas clássico:
 
 > query ficou lenta sem mudar código.
 
+<a id="como-o-postgresql-decide-executar-uma-query"></a>
 ### Como o PostgreSQL decide executar uma query
 
 Toda vez que você roda:
@@ -1032,6 +1040,7 @@ Fluxo real dentro do PostgreSQL:
 6. `EXPLAIN ANALYZE` revela diferença.
 7. `ANALYZE` corrige.
 
+<a id="indices-do-postgresql"></a>
 ### Índices do PostgreSQL
 
 :one: **B-Tree (90% dos casos)**
@@ -1355,6 +1364,7 @@ E normalmente o dev diz:
 
 > "mas eu já criei índice..."
 
+<a id="paginacao-offset-x-keyset"></a>
 ### Paginação: OFFSET x Keyset
 
 #### OFFSET pagination
@@ -1442,6 +1452,7 @@ Sintoma típico:
 
 > endpoint de listagem derruba o sistema em horário de pico.
 
+<a id="pool-de-conexoes"></a>
 ### Pool de conexões
 
 Aqui está a parte crítica:
@@ -1766,6 +1777,7 @@ Isso estabeliza:
 - checkpoints
 - locks
 
+<a id="o-problema-de-transacoes-longas"></a>
 ### O problema de transações longas
 
 Lembre do MVCC:
@@ -1865,6 +1877,7 @@ ele começa a bloquear writes para evitar corrupção.
 Ou seja:
 uma única conexão esquecida pode degradar todo o banco.
 
+<a id="replicas"></a>
 ### Replicas
 
 Lembra do WAL?
@@ -1965,6 +1978,7 @@ Isso chama:
 
 Aplicações precisam lidar com isso.
 
+<a id="failover"></a>
 ### Failover
 
 #### O cenário
@@ -2057,6 +2071,7 @@ Senão a aplicação continua tentando conectar no primary morto.
 
 Sempre há trade-off entre **durabilidade vs latência**
 
+<a id="migrations"></a>
 ### Migrations
 
 #### O que derruba a aplicação
@@ -2150,6 +2165,7 @@ Compatibilidade dupla temporária
 
 A maioria dos incidentes de banco em produção não é query lenta é **migration bloqueante**.
 
+<a id="prepared-statements"></a>
 ### Prepared Statements
 
 Quando você executa normalmente:
@@ -2245,6 +2261,7 @@ Soluções comuns:
 - usar PgBouncer session mode
 - `prepareThreshold` tuning
 
+<a id="o-problema-de-n1-queries"></a>
 ### O problema de N+1 queries
 
 Você faz:
@@ -2338,6 +2355,7 @@ Sintomas clássicos:
 
 O problema é **multiplicação concorrente**, não custo unitário.
 
+<a id="idempotencia-no-postgresql"></a>
 ### Idempotência no PostgreSQL
 
 ---
@@ -2422,6 +2440,7 @@ sob concorrência alta você pode ter:
 - dupla execução
 - inconsistência
 
+<a id="fila-usando-postgresql"></a>
 ### Fila usando PostgreSQL
 
 Tabela:
@@ -2517,6 +2536,7 @@ Mas é excelente para:
 - retry jobs
 - processamento interno
 
+<a id="o-que-e-pg_stat_activity-e-pg_stat_statements-e-qual-sua-importancia"></a>
 ### O que é `pg_stat_activity` e `pg_stat_statements` e qual sua importância?
 
 Quando alguém diz:
@@ -2639,6 +2659,7 @@ ORDER BY total_exec_time DESC;
 Sem `pg_stat_statements`, você otimiza "no escuro".
 Sem `pg_stat_activity`, você não resolve indicentes ao vivo.
 
+<a id="o-que-e-pitr-point-in-time-recovery"></a>
 ### O que é PITR (Point-in-Time Recovery)?
 
 Lembra do WAL?
@@ -2716,6 +2737,7 @@ downtime + perda massiva de dados.
 Com PITR:
 recuperação cirúrgica.
 
+<a id="quando-usar-replicacao-fisica-e-quando-usar-replicacao-logica"></a>
 ### Quando usar replicação física e quando usar replicação lógica
 
 Lembra do WAL?
@@ -2820,6 +2842,7 @@ Sem parar o sistema.
 
 Mesma fonte, usos diferentes
 
+<a id="contencao-de-locks"></a>
 ### Contenção de locks
 
 Imagine 500 requisições simultâneas fazendo:

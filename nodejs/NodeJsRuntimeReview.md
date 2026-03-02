@@ -19,6 +19,7 @@
 
 ---
 
+<a id="o-principio-central"></a>
 ## O princípio central
 
 > Node não é ruim com carga.
@@ -27,6 +28,7 @@
 Ele foi projetado para **orquestrar I/O**, não para **reter trabalho**.
 
 
+<a id="o-recurso-mais-critico-do-node"></a>
 ## O recurso mais crítico do Node
 
 Não é CPU
@@ -41,8 +43,10 @@ Enquanto seu código executa no thread principal:
   - nenhum timer roda
   - nenhum healthcheck responde
 
+<a id="os-4-tipos-classicos-de-queda"></a>
 ## Os 4 tipos clássicos de queda
 
+<a id="1-event-loop-blocking-cpu-bound"></a>
 ### 1) Event Loop Blocking (CPU-bound)
 
 #### Causa
@@ -66,6 +70,7 @@ Código síncrono monopoliza o V8.
 - fila de jobs
 - nunca CPU pesado no request HTTP
 
+<a id="2-blocking-io-sync-apis"></a>
 ### 2) Blocking I//O (Sync APIs)
 
 #### Causa
@@ -84,6 +89,7 @@ O thread principal fica esperando o kernel.
 #### Solução
 Sempre usar APIs assíncronas
 
+<a id="3-thread-pool-saturation"></a>
 ### 3) Thread Pool Saturation
 
 #### Causa
@@ -109,6 +115,7 @@ Endpoint de login pode derrubar toda a API.
 - fila
 - não expor computação pesada ao público
 
+<a id="4-memory-pressure-gc-collapse"></a>
 ### 4) Memory Pressure / GC Collapse
 
 #### Causa
@@ -129,6 +136,7 @@ O V8 é otimizado para objetos curtos, não grandes.
 O problema não é alocar
 O problema é **reter**.
 
+<a id="como-o-garbage-collector-te-derruba"></a>
 ## Como o Garbage Collector te derruba
 O V8 tem duas áreas:
 
@@ -146,6 +154,7 @@ Quando muitos objetos sobrevivem:
 Isso causa:
 timeouts -> retries -> avalanche -> queda
 
+<a id="streams-vs-buffer-o-ponto-mais-importante"></a>
 ## Streams vs Buffer (o ponto mais importante)
 
 #### Buffer
@@ -178,6 +187,7 @@ Use **stream quando**:
 > Node escala quando move dados
 > Node cai quando possui dados
 
+<a id="upload-correto"></a>
 ## Upload correto
 
 ERRADO:
@@ -197,6 +207,7 @@ Nunca:
 - `sharp().toBuffer()` em produção
 - enviar Buffer grande ao S3
 
+<a id="webhooks-muito-importante"></a>
 ## Webhooks (muito importante)
 Nunca processe webhook dentro do request.
 
@@ -209,6 +220,7 @@ Por quê:
 - provedores fazem retry agressivo
 - resposta lenta cria avalanche de tráfego
 
+<a id="filas-o-verdadeiro-motivo-de-existirem"></a>
 ## Filas — o verdadeiro motivo de existirem
 Filas não servem para performance
 
@@ -218,6 +230,7 @@ Servem para:
 - proteger o event loop
 - garantir durabilidade
 
+<a id="idempotencia"></a>
 ## Idempotência
 Filas garantem **at-least-once**
 
@@ -233,6 +246,7 @@ Normalmente com:
 - update condicional
 - estado imutável
 
+<a id="regra-final-para-backend-node"></a>
 ## Regra final para backend Node
 Sempre pergunte:
 

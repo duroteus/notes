@@ -22,12 +22,14 @@
 
 ---
 
+<a id="1-o-que-e-o-nestjs-e-qual-problema-ele-tenta-resolver-dentro-do-ecossistema-nodejs"></a>
 #### 1) O que é o NestJS e qual problema ele tenta resolver dentro do ecossistema Node.js?
 
 **O NestJS é um framework backend para Node.js que resolve a falta de arquitetura e padronização presente em frameworks minimalistas como Express.** Ele fornece um container de injeção de dependência, modularização e ciclo de vida de aplicação, inspirado principalmente no Angular e em frameworks como Spring Boot. Ele roda sobre adapters HTTP como Express ou Fastify, atuando como uma camada de abstração. O uso de decorators permite registrar metadados e construir automaticamente rotas, providers e dependências, tornando o código mais testável, previsível e escalável.
 
 ---
 
+<a id="2-o-que-e-um-provider-no-nestjs-e-como-o-mecanismo-de-dependency-injection-realmente-funciona-internamente"></a>
 #### 2) O que é um Provider no NestJS e como o mecanismo de Dependency Injection realmente funciona internamente?
 
 Um provider no NestJS é **qualquer classe registrada no container de injeção de dependência (IoC container)** do módulo e gerenciada pelo ciclo de vida da aplicação. **Normalmente, services, repositories e factories são providers**. Ao usar **<span style="color: green">@Injectable()</span>**, a classe passa a poder ser resolvida pelo container.
@@ -53,6 +55,7 @@ Assim, o desenvolvedor não cria objetos manualmente (**<span style="color: gree
 
 ---
 
+<a id="3-o-nestjs-possui-tres-escopos"></a>
 #### 3) O NestJS possui três escopos:
  - `DEFAULT`
  - `REQUEST`
@@ -83,6 +86,7 @@ Explique:
 
 ---
 
+<a id="4-explique-a-responsabilidade-de"></a>
 #### 4) Explique a responsabilidade de:
  - **Middleware**
  - **Guards**
@@ -101,6 +105,7 @@ Explique:
 
 ---
 
+<a id="5-qual-a-diferenca-pratica-entre-exception-filter-e-interceptor-e-quando-voce-usaria-cada-um"></a>
 #### 5) Qual a diferença prática entre Exception Filter e Interceptor, e quando você usaria cada um?
 
 **Interceptor** é usado para lógica transversal ao redor da execução do handler (antes e depois). Ele recebe o fluxo da resposta e pode transformá-la, medir tempo, aplicar cache, retry ou timeout. Atua no caminho normal de sucesso da requisição.
@@ -114,6 +119,7 @@ Quando usar:
 
 ---
 
+<a id="6-explique"></a>
 #### 6) Explique:
  - `useClass`
  - `useValue`
@@ -143,6 +149,7 @@ Exemplo real:
  - produção -> Stripe
  - teste -> MockPaymentService
 
+<a id="usevalue"></a>
 ## <span style="color:green">useValue</span>
 
 Você fornece uma instância já pronta
@@ -164,6 +171,7 @@ Uso típico:
  - mocks em testes
  - bibliotecas que não são classes do Nest.
 
+<a id="usefactory"></a>
 ## <span style="color:green">useFactory</span>
 
 Você fornece uma função que cria o objeto.
@@ -191,6 +199,7 @@ Como diferenciar rapidamente:
 
 ---
 
+<a id="7-o-que-exatamente-e-um-module-no-nest-e-qual-problema-arquitetural-ele-resolve-dentro-de-uma-aplicacao-grande"></a>
 #### 7) O que exatamente é um Module no Nest e qual problema arquitetural ele resolve dentro de uma aplicação grande?
 
 Um Module no NestJS é uma unidade de organização e encapsulamento do container de injeção de dependência.
@@ -230,6 +239,7 @@ Ele força:
 
 ---
 
+<a id="8-por-que-as-vezes-precisamos-usar-forwardref-ao-importar-modulos-ou-injetar-services"></a>
 #### 8) Por que às vezes precisamos usar forwardRef() ao importar módulos ou injetar services?
 
 **O que está acontecendo quando isso ocorre?**
@@ -296,6 +306,7 @@ UserOrdersDomainService :white_check_mark:
 
 ---
 
+<a id="9-no-nestjs-qual-a-diferenca-entre-dto-e-entity-e-por-que-misturar-os-dois-e-considerado-ma-pratica"></a>
 #### 9) No NestJS, qual a diferença entre DTO e Entity e por que misturar os dois é considerado má prática?
 
 **DTO** (Data Transfer Object) representa o formato dos dados que entram ou saem da API. Ele pertence à camada de transporte (HTTP) e é usado principalmente para validação e tipagem da interface pública da aplicação, normalmente junto ao **<span style="color: green">ValidationPipe</span>**
@@ -331,6 +342,7 @@ passaria a quebrar clientes da API
 
 ---
 
+<a id="10-no-nestjs-por-que-nao-e-recomendado-acessar-diretamente-req-e-res-expressfastify-dentro-do-controller-sempre-que-possivel"></a>
 #### 10) No NestJS, por que não é recomendado acessar diretamente <span style="color:green">req</span> e <span style="color:green">res</span> (Express/Fastify) dentro do controller sempre que possível?
 
 **O que você perde ao fazer isso?**
@@ -382,6 +394,7 @@ Casos específicos:
 
 ---
 
+<a id="11-qual-a-diferenca-entre-middleware-e-interceptor-se-ambos-conseguem-executar-codigo-antes-da-rota"></a>
 #### 11) Qual a diferença entre Middleware e Interceptor se ambos conseguem executar código antes da rota?
 
 **Por que o Nest criou dois mecanismos?**
@@ -398,6 +411,7 @@ O middleware resolve preocupações de infraestrutura HTTP, enquanto o intercept
 
 ---
 
+<a id="12-no-nestjs-existe-o-conceito-de-lifecycle-hooks-o-que-e-o-onmoduleinit-e-em-que-tipo-de-situacao-real-voce-usaria-isso"></a>
 #### 12) No NestJS existe o conceito de Lifecycle Hooks. O que é o <span style="color:green">OnModuleInit</span> e em que tipo de situação real você usaria isso?
 
 **<span style="color:green">OnModuleInit</span>** é um lifecycle hook executado pelo Nest logo após o container de dependências terminar de instanciar os providers de um módulo e resolver todas as injeções.
@@ -457,6 +471,7 @@ O correto seria:
 
 ---
 
+<a id="13-explique-como-funciona-a-autenticacao-com-jwt-usando-passport-no-nestjs-e-qual-o-papel-da-strategy-e-do-guard"></a>
 #### 13) Explique como funciona a autenticação com JWT usando Passport no NestJS e qual o papel da Strategy e do Guard
 
 No NestJS a autenticação não é feita diretamente no controller.
@@ -496,6 +511,7 @@ O `AuthGuard('jwt')` intercepta a requisição e delega a validação para a `Jw
 
 ---
 
+<a id="14-jwt-e-stateless-entao-como-e-possivel-invalidar-a-sessao-de-um-usuario-antes-do-token-expirar"></a>
 #### 14) JWT é stateless. Então como é possível invalidar a sessão de um usuário antes do token expirar?
 
 Esse é um dos maiores problemas do JWT

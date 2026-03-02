@@ -20,6 +20,7 @@ Este documento consolida os principais conceitos discutidos: arquitetura do Node
 
 ---
 
+<a id="1-arquitetura-do-nodejs-quem-e-quem"></a>
 ## 1) Arquitetura do Node.js (quem é quem)
 
 ```
@@ -51,6 +52,7 @@ Node.js Runtime
 
 ---
 
+<a id="2-call-stack-vs-event-loop"></a>
 ## 2) Call Stack vs Event Loop
 
 ### Call Stack
@@ -68,6 +70,7 @@ Node.js Runtime
 
 ---
 
+<a id="3-fases-do-event-loop-simplificado"></a>
 ## 3) Fases do Event Loop (simplificado)
 
 **1.** timers (setTimeout, setInterval) <br>
@@ -88,6 +91,7 @@ Call stack esvazia
 
 ---
 
+<a id="4-microtasks-vs-macrotasks"></a>
 ## 4) Microtasks vs Macrotasks
 
 | Tipo      | Onde roda | Exemplos              |
@@ -101,6 +105,7 @@ Regra:
 
 ---
 
+<a id="5-sockets-kernel-e-como-o-servidor-http-realmente-funciona"></a>
 ## 5. Sockets, Kernel e como o servidor HTTP realmente funciona
 
 Quando você faz:
@@ -167,6 +172,7 @@ call stack esvazia
 
 ---
 
+<a id="6-fluxo-real-de-uma-requisicao-http"></a>
 ## 6. Fluxo real de uma requisição HTTP
 
 ```
@@ -184,6 +190,7 @@ O servidor "ocioso" está apenas bloqueado aguardando eventos do sistema operaci
 
 ---
 
+<a id="7-asyncawait-o-que-realmente-acontece"></a>
 ## 7. Async/Await (o que realmente acontece)
 
 Código:
@@ -210,6 +217,7 @@ await
 
 ---
 
+<a id="8-thread-pool-vs-worker-threads"></a>
 ## 8. Thread Pool vs Worker Threads
 
 ### Thread Pool (libuv)
@@ -237,6 +245,7 @@ Não usa socket.
 
 ---
 
+<a id="9-o-que-e-closure"></a>
 ## 9. O que é Closure
 
 ### Definição:
@@ -267,6 +276,7 @@ Por quê?
 
 ---
 
+<a id="10-closure-e-garbage-collector"></a>
 ## 10. Closure e Garbage Collector
 
 O GC usa **alcançabilidade (reachability)**:
@@ -294,6 +304,7 @@ Handlers, timers e listeners podem manter objetos grandes vivos → memory leak.
 
 ---
 
+<a id="11-o-classico-var-vs-let-no-loop"></a>
 ## 11. O clássico: var vs let no loop
 
 Código:
@@ -339,6 +350,7 @@ Cada callback fecha sobre uma variável diferente.
 
 # Bônus
 
+<a id="frases-chave-para-entrevistas"></a>
 ## Frases-chave para entrevistas
 
 O event loop não executa JS; ele agenda execução no V8.
@@ -353,6 +365,7 @@ let cria novo ambiente por iteração; var compartilha o mesmo.
 
 O GC coleta por alcançabilidade, não por escopo.
 
+<a id="modelo-mental-final"></a>
 ## Modelo mental final
 
 Sistema operacional gera eventos

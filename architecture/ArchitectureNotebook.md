@@ -13,6 +13,7 @@
 
 ---
 
+<a id="api-rest-de-pedidos-alto-volume-50k-reqmin"></a>
 ## API REST de pedidos (alto volume — 50k req/min)
 
 ### Cenário
@@ -86,6 +87,7 @@ Resultado:
 - cliente faz retry saudável
 - sem duplicação
 
+<a id="estoque-concorrente-hot-row-no-banco"></a>
 ## Estoque concorrente (hot row no banco)
 
 ### Cenário
@@ -170,6 +172,7 @@ Sem fila de lock.
 - reservation system
 - convergent state
 
+<a id="upload-de-videos-grandes-800mb"></a>
 ## Upload de vídeos grandes (800MB)
 
 ### Cenário
@@ -235,6 +238,7 @@ Node apenas autoriza
 - file descriptors
 - slow clients
 
+<a id="websockets-200k-usuarios-online"></a>
 ## WebSockets (200k usuários online)
 
 ### Cenário
@@ -289,6 +293,7 @@ Opcional:
 - pub/sub routing
 - reconnection storm
 
+<a id="webhooks-externos"></a>
 ## Webhooks externos
 
 ### Cenário
@@ -354,6 +359,7 @@ O kernel descarta conexões antes do Node aceitar.
 - accept backlog
 - retry amplification
 
+<a id="reverse-proxy-vs-load-balancer"></a>
 ## Reverse proxy vs Load balancer
 
 ### Problema
@@ -390,6 +396,7 @@ Funções:
 - connection burst buffering
 - keep-alive handling
 
+<a id="webhooks-conexoes-simultaneas"></a>
 ## Webhooks + conexões simultâneas
 
 Problema específico do Node:
@@ -405,6 +412,7 @@ kernel derruba conexões antes do JS rodar
 
 Proxy resolve pois é otimizado em C para aceitar conexões massivas.
 
+<a id="o-aprendizado-central"></a>
 ## O aprendizado central
 
 Node raramente falha por CPU
